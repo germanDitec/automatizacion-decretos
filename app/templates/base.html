@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock title %} - Maipú</title>
+    {% block css %}{% endblock css %}
+</head>
+<body>
+
+    <section>
+        {% for message in get_flashed_messages() %}
+      <div class="flash" id="flash-message"><p>{{ message }}</p></div>
+      {% endfor %}
+        {% block content %}
+        
+        {% endblock %}
+    </section>
+    {% block js %}{% endblock js %}
+</body>
+</html>

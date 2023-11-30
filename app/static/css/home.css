@@ -1,0 +1,16 @@
+.file-drop-area {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    font-size: 1.2em;
+    cursor: pointer;
+}
+
+.file-input {
+    display: none;
+}
+
+.file-drop-area:hover {
+    background-color: #f0f0f0;
+}

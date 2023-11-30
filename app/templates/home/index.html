@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Pagina de inicio{% endblock title %}
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+{% endblock %}
+{% block content %}
+<form method="post" enctype="multipart/form-data" id="upload-form">
+    <div class="file-drop-area">
+        <input type="file" name="file" id="file" class="file-input" required>
+        <label for="file" class="file-label">Selecciona un archivo o arrástralo aquí</label>
+    </div>
+    <button type="submit">Generar</button>
+</form>
+{% endblock content %}
+{% block js %}
+<script src="{{ url_for('static', filename='js/dragAndDrop.js') }}"></script>
+ 
+{% endblock %}
