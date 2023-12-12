@@ -373,10 +373,59 @@ def get_datos_adjudicacion(pdf_path):
     except:
         return abort(400)
 
+def get_rechazados_text(rechazados):
+    motivo_rechazo = rechazados[0].get("motivo", "")
+    fragmentos_texto = [f"{proponente['nombre']}, RUT {proponente['RUT']}" for proponente in rechazados]
+    proponentes_texto = "; ".join(fragmentos_texto)
+    return proponentes_texto, motivo_rechazo
+
+def get_inadmisibles_text(inadmisibles):
+    fragmentos_texto_inadmisible = [f"{inadmisible['nombre']}, RUT {inadmisible['RUT']}" for inadmisible in inadmisibles]
+    proponentes_inadmisible = "; ".join(fragmentos_texto_inadmisible)
+    return proponentes_inadmisible
+
+def add_inadmisibles_decreto(doc, inadmisibles, id, titulo,nombre_adjudicada, rut_adjudicada, total, plazo):
+    proponentes_inadmisible = get_inadmisibles_text(inadmisibles)
+    decreto_segundo = f"2.- Declárense inadmisibles las ofertas de la empresa {proponentes_inadmisible}, según los argumentos señalados en el considerando cuarto."
+    decreto_tercero = f"3.- Adjudiquese la Propuesta Pública ID {id}, denominada {titulo}, al proponente {nombre_adjudicada}, RUT {rut_adjudicada}, por la suma total de ${total} (REFLEJAR EL VALOR EN TEXTO), para entregar los productos en un plazo de {plazo}."
+    decreto_cuarto = f"4.- El precio del contrato de compra será el valor que pague la Municipalidad al contratista por el servicio contratado y debidamente ejecutados, sobre la base de los valores unitarios ofertados y el monto total ofertado. / Emitase la Orden de Compra correspondiente a nombre del proponente adjudicado, por el monto informado en el numeral precedente"
+    decreto_quinto =f"5.- Imputese el gasto que involucra la presente adjudicación a la cuenta XXXXXXX."
+    decreto_sexto = f"6.- La Secretaria Comunal de Planificación dispondrá la publicación del presente Decreto en el Sistema de Información de Compras y Contratación Pública (www.mercadopublico.cl), según lo dispuesto en el Articulo 57° del Reglamento de la Ley N° 19.886."
+    decreto_septimo = f"7.- Designese como Unidad Técnica responsable de la gestión y administración de la orden de compra y que actuará como Inspección Técnica, será la Dirección XXXXXXX."
+    return decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto, decreto_sexto, decreto_septimo
+
+def add_no_inadmisible_decreto(doc, id, titulo, nombre_adjudicada, rut_adjudicada, total, plazo):
+    decreto_segundo = f"2.- Adjudiquese la Propuesta Pública ID {id}, denominada {titulo}, al proponente {nombre_adjudicada}, RUT {rut_adjudicada}, por la suma total de ${total} (REFLEJAR EL VALOR EN TEXTO), para entregar los productos en un plazo de {plazo}."
+    decreto_tercero = f"3.- El precio del contrato de compra será el valor que pague la Municipalidad al contratista por el servicio contratado y debidamente ejecutados, sobre la base de los valores unitarios ofertados y el monto total ofertado. / Emitase la Orden de Compra correspondiente a nombre del proponente adjudicado, por el monto informado en el numeral precedente"
+    decreto_cuarto = f"4.- Imputese el gasto que involucra la presente adjudicación a la cuenta XXXXXXXX."
+    decreto_quinto = f"5.- La Secretaria Comunal de Planificación dispondrá la publicación del presente Decreto en el Sistema de Información de Compras y Contratación Pública (www.mercadopublico.cl), según lo dispuesto en el Articulo 57° del Reglamento de la Ley N° 19.886."
+    decreto_sexto = f"6.- Designese como Unidad Técnica responsable de la gestión y administración de la orden de compra y que actuará como Inspección Técnica, será la Dirección XXXXXXX."
+    return decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto, decreto_sexto
+
+def add_inadmisibles_no_rechazados(doc, proponentes_inadmisible, id, titulo, nombre_adjudicada, rut_adjudicada, total, plazo):
+    decreto_primero = f"1.- Declárense inadmisibles las ofertas de la empresa {proponentes_inadmisible}, por los argumentos senalados en el considerando cuarto."
+    decreto_segundo = f"2.- Adjudiquese la Propuesta Pública ID {id}, denominada {titulo}, al proponente {nombre_adjudicada}, RUT {rut_adjudicada}, por la suma total de ${total} (REFLEJAR EL VALOR EN TEXTO), para entregar los productos en un plazo de {plazo}."
+    decreto_tercero = f"3.- El precio del contrato de compra será el valor que pague la Municipalidad al contratista por el servicio contratado y debidamente ejecutados, sobre la base de los valores unitarios ofertados y el monto total ofertado. / Emitase la Orden de Compra correspondiente a nombre del proponente adjudicado, por el monto informado en el numeral precedente"
+    decreto_cuarto = f"4.- Imputese el gasto que involucra la presente adjudicación a la cuenta 2152205006."
+    decreto_quinto = f"5.- La Secretaria Comunal de Planificación dispondrá la publicación del presente Decreto en el Sistema de Información de Compras y Contratación Pública (www.mercadopublico.cl), según lo dispuesto en el Articulo 57° del Reglamento de la Ley N° 19.886."
+    decreto_sexto = f"6.- Designese como Unidad Técnica responsable de la gestión y administración de la orden de compra y que actuará como Inspección Técnica, será la Dirección XXXXXXX."
+    return decreto_primero, decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto, decreto_sexto
+
+
+def add_noadm_norec(doc, id, titulo, nombre_adjudicada, rut_adjudicada, total, plazo):
+    decreto_primero = f"1.- Adjudiquese la Propuesta Pública ID {id}, denominada {titulo}, al proponente {nombre_adjudicada}, RUT {rut_adjudicada}, por la suma total de ${total} (REFLEJAR EL VALOR EN TEXTO), para entregar los productos en un plazo de {plazo}."
+    decreto_segundo = f"2.- El precio del contrato de compra será el valor que pague la Municipalidad al contratista por el servicio contratado y debidamente ejecutados, sobre la base de los valores unitarios ofertados y el monto total ofertado. / Emitase la Orden de Compra correspondiente a nombre del proponente adjudicado, por el monto informado en el numeral precedente"
+    decreto_tercero = f"3.- Imputese el gasto que involucra la presente adjudicación a la cuenta XXXXXXX."
+    decreto_cuarto = f"4.- La Secretaria Comunal de Planificación dispondrá la publicación del presente Decreto en el Sistema de Información de Compras y Contratación Pública (www.mercadopublico.cl), según lo dispuesto en el Articulo 57° del Reglamento de la Ley N° 19.886."
+    decreto_quinto = f"5.- Designese como Unidad Técnica responsable de la gestión y administración de la orden de compra y que actuará como Inspección Técnica, será la Dirección XXXXXXX."
+    return decreto_primero, decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto
+ 
+
 @bp.route("/generate/<filename>", methods=['GET'])
 def generate_word(filename):
     if filename.endswith(".pdf"):
         try:
+            doc = Document()
             pdf_path = os.path.join('app/static/documents_folder', filename)
             n_decreto = extract_num_decreto(pdf_path)
             id = extract_id_decreto(pdf_path)
@@ -407,79 +456,44 @@ def generate_word(filename):
                 if linea is not None:
                     lista_empresa_adjudicada = f"- Del resultado de la evaluación, se establece que la oferta presentada por los proponentes {proponentes_adjudicados} . Son más convenientes para los intereses municipales, por lo que se propone su adjudicación"
                 else:
-                    considerando_tercer += f"\n- {nombre_adjudicada}, RUT {rut_adjudicada}"
                     lista_empresa_adjudicada = f"- Del resultado de la evaluación, se establece que la oferta presentada por el proponente {nombre_adjudicada}, RUT {rut_adjudicada}. Es más conveniente para los intereses municipales, por lo que se propone su adjudicación"
 
- 
             decreto_primero = ""
-            decreto_segundo = ""
-            decreto_tercero = ""
+            decreto_segundo =""
+            decreto_tercero =""
             decreto_cuarto = ""
-            decreto_quinto = ""
+            decreto_quinto =""
             decreto_sexto = None
             decreto_septimo = None
             if rechazados:
                 considerando_tercer = "\n3.- Que, en el Acta de Apertura de las ofertas, de fecha {}, se rechazaron las siguientes ofertas:".format(fecha_apertura)
-                motivo_rechazo = rechazados[0].get("motivo", "")
-                fragmentos_texto=[]
-        
-                for proponente in rechazados:
-                    nombre = proponente.get("nombre", "")
-                    rut = proponente.get("RUT", "")
-                    fragmento = f"{nombre}, RUT {rut}"
-                    fragmentos_texto.append(fragmento)
-        
-                proponentes_texto = "; ".join(fragmentos_texto)
-                lista_rechazados = f"La de los proponentes {proponentes_texto}, debido a que {motivo_rechazo.lower()}."
-                decreto_primero = f"1.- Declárense rechazadas las ofertas de los proponentes {proponentes_texto}, según los argumentos señalados en el considerando tercero."
-                if inadmisibles:
-                    for inadmisible in inadmisibles:
-                        empresa_inadmisible = inadmisible.get("nombre", "")
-                        rut_inadmisible = inadmisible.get("RUT", "")
-                    decreto_segundo = f"2.- Declárense inadmisibles las ofertas de la empresa {empresa_inadmisible} con RUT {rut_inadmisible}, según los argumentos señalados en el considerando cuarto."
-                    decreto_tercero = f"3.- Adjudiquese la Propuesta Pública ID {id}, denominada {titulo}, al proponente {nombre_adjudicada}, RUT {rut_adjudicada}, por la suma total de ${total} (REFLEJAR EL VALOR EN TEXTO), para entregar los productos en un plazo de {plazo}."
-                    decreto_cuarto = f"4.- El precio del contrato de compra será el valor que pague la Municipalidad al contratista por el servicio contratado y debidamente ejecutados, sobre la base de los valores unitarios ofertados y el monto total ofertado. / Emitase la Orden de Compra correspondiente a nombre del proponente adjudicado, por el monto informado en el numeral precedente"
-                    decreto_quinto = f"5.- Imputese el gasto que involucra la presente adjudicación a la cuenta 2152205006."
-                    decreto_sexto = f"6.- La Secretaria Comunal de Planificación dispondrá la publicación del presente Decreto en el Sistema de Información de Compras y Contratación Pública (www.mercadopublico.cl), según lo dispuesto en el Articulo 57° del Reglamento de la Ley N° 19.886."
-                    decreto_septimo = f"7.- Designese como Unidad Técnica responsable de la gestión y administración de la orden de compra y que actuará como Inspección Técnica, será la Dirección XXXXXXX."
-                else:
-                    decreto_segundo = f"2.- Adjudiquese la Propuesta Pública ID {id}, denominada {titulo}, al proponente {nombre_adjudicada}, RUT {rut_adjudicada}, por la suma total de ${total} (REFLEJAR EL VALOR EN TEXTO), para entregar los productos en un plazo de {plazo}."
-                    decreto_tercero = f"3.- El precio del contrato de compra será el valor que pague la Municipalidad al contratista por el servicio contratado y debidamente ejecutados, sobre la base de los valores unitarios ofertados y el monto total ofertado. / Emitase la Orden de Compra correspondiente a nombre del proponente adjudicado, por el monto informado en el numeral precedente"
-                    decreto_cuarto = f"4.- Imputese el gasto que involucra la presente adjudicación a la cuenta 2152205006."
-                    decreto_quinto = f"5.- La Secretaria Comunal de Planificación dispondrá la publicación del presente Decreto en el Sistema de Información de Compras y Contratación Pública (www.mercadopublico.cl), según lo dispuesto en el Articulo 57° del Reglamento de la Ley N° 19.886."
-                    decreto_sexto = f"6.- Designese como Unidad Técnica responsable de la gestión y administración de la orden de compra y que actuará como Inspección Técnica, será la Dirección XXXXXXX."
+                proponentes_rechazados, motivo_rechazo = get_rechazados_text(rechazados)
+                lista_rechazados = f"La de los proponentes {proponentes_rechazados}, por motivo de {motivo_rechazo}."
 
+                decreto_primero = f"1.- Declárense rechazadas las ofertas de los proponentes {proponentes_rechazados}, según los argumentos señalados en el considerando tercero."
+                if inadmisibles:
+                    decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto, decreto_sexto, decreto_septimo = add_inadmisibles_decreto(doc, inadmisibles, id, titulo,nombre_adjudicada, rut_adjudicada, total, plazo)
+                else:
+                    decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto = add_no_inadmisible_decreto(doc, id, titulo, nombre_adjudicada, rut_adjudicada, total, plazo)
             else:
                 considerando_tercer = "\n3.- Que, en el Acto de Apertura de las ofertas, de fecha {}, no existen ofertas rechazadas.".format(fecha_apertura)
                 lista_rechazados = ""
                 if inadmisibles:
-                    for inadmisible in inadmisibles:
-                        empresa_inadmisible = inadmisible.get("nombre", "")
-                        rut_inadmisible = inadmisible.get("RUT", "")
-                    decreto_primero = f"1.- Declárense inadmisibles las ofertas de la empresa {empresa_inadmisible} con RUT {rut_inadmisible}, por los argumentos senalados en el considerando cuarto."
-                    decreto_segundo = f"2.- Adjudiquese la Propuesta Pública ID {id}, denominada {titulo}, al proponente {nombre_adjudicada}, RUT {rut_adjudicada}, por la suma total de ${total} (REFLEJAR EL VALOR EN TEXTO), para entregar los productos en un plazo de {plazo}."
-                    decreto_tercero = f"3.- El precio del contrato de compra será el valor que pague la Municipalidad al contratista por el servicio contratado y debidamente ejecutados, sobre la base de los valores unitarios ofertados y el monto total ofertado. / Emitase la Orden de Compra correspondiente a nombre del proponente adjudicado, por el monto informado en el numeral precedente"
-                    decreto_cuarto = f"4.- Imputese el gasto que involucra la presente adjudicación a la cuenta 2152205006."
-                    decreto_quinto = f"5.- La Secretaria Comunal de Planificación dispondrá la publicación del presente Decreto en el Sistema de Información de Compras y Contratación Pública (www.mercadopublico.cl), según lo dispuesto en el Articulo 57° del Reglamento de la Ley N° 19.886."
-                    decreto_sexto = f"6.- Designese como Unidad Técnica responsable de la gestión y administración de la orden de compra y que actuará como Inspección Técnica, será la Dirección XXXXXXX."
+                    proponentes_inadmisible = get_inadmisibles_text(inadmisibles)
+                    decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto, decreto_sexto = add_inadmisibles_no_rechazados(doc, proponentes_inadmisible, id, titulo,nombre_adjudicada, rut_adjudicada, total, plazo)
 
             if not rechazados and not inadmisibles:
-                decreto_primero = f"1.- Adjudiquese la Propuesta Pública ID {id}, denominada {titulo}, al proponente {nombre_adjudicada}, RUT {rut_adjudicada}, por la suma total de ${total} (REFLEJAR EL VALOR EN TEXTO), para entregar los productos en un plazo de {plazo}."
-                decreto_segundo = f"2.- El precio del contrato de compra será el valor que pague la Municipalidad al contratista por el servicio contratado y debidamente ejecutados, sobre la base de los valores unitarios ofertados y el monto total ofertado. / Emitase la Orden de Compra correspondiente a nombre del proponente adjudicado, por el monto informado en el numeral precedente"
-                decreto_tercero = f"3.- Imputese el gasto que involucra la presente adjudicación a la cuenta 2152205006."
-                decreto_cuarto = f"4.- La Secretaria Comunal de Planificación dispondrá la publicación del presente Decreto en el Sistema de Información de Compras y Contratación Pública (www.mercadopublico.cl), según lo dispuesto en el Articulo 57° del Reglamento de la Ley N° 19.886."
-                decreto_quinto = f"5.- Designese como Unidad Técnica responsable de la gestión y administración de la orden de compra y que actuará como Inspección Técnica, será la Dirección XXXXXXX."
-            
-
+                decreto_primero, decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto = add_noadm_norec(doc, id, titulo, nombre_adjudicada, rut_adjudicada, total, plazo)
+           
             considerando_cuarto = "\n4.-Que de acuerdo con el informe de Evaluación de Ofertas, de fecha {}, la comisión evaluadora propone lo siguiente:".format(fecha_informe)
             considerando_quinto = "\n5.- Que, se cuenta con la disponibilidad presupuestaria para este fin, según da cuenta el Certificado de Factibilidad N° X/XX, de fecha xx de xxxx de 2023."
             considerando_sexto = "\n6.- Que, en el Numeral 13 de las Bases Administrativas, establece que la Unidad Técnica responsable de supervisar la ejecución de la ORDEN DE COMPRA / CONTRATO será la Dirección de XXXXXX (SIGLA)"
         
+
             table = extract_table_from_pdf(pdf_path)
+            print("Table", table)
 
             output_file_path = pdf_path.replace(".pdf", "-PLANTILLA_DECRETO.docx")
-            doc = Document()
-            p = doc.add_paragraph()
             header = doc.sections[0].header
         
             paragraph = header.paragraphs[0]
@@ -517,12 +531,14 @@ def generate_word(filename):
                 doc.add_paragraph(decreto_septimo)
 
             doc.save(output_file_path)
+        
             with open(output_file_path, "rb") as docx_file:
                 result = mammoth.convert_to_html(docx_file)
                 html = result.value
+        
             return render_template('home/process.html', html=html, filename=filename)
         except Exception as e:
-                return str(e)
+                return f"Error inesperado {str(e)}"
 
 @bp.route("/download/<filename>")
 def download_file(filename):
