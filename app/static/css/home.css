@@ -1,16 +1,53 @@
+body {
+  height: 100vh;
+}
+
 .file-drop-area {
-    border: 2px dashed #ccc;
-    border-radius: 8px;
-    padding: 20px;
-    text-align: center;
-    font-size: 1.2em;
-    cursor: pointer;
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  padding: 20px;
+  padding-top: 60px;
+  height: 200px;
+  text-align: center;
+  font-size: 1.2em;
+  cursor: pointer;
+}
+
+.file-label {
+  margin-top: 10px;
+  font-weight: bold;
 }
 
 .file-input {
-    display: none;
+  display: none;
 }
 
 .file-drop-area:hover {
-    background-color: #f0f0f0;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  margin-top: 60px;
+  width: 400px;
+  margin: 0 auto;
+}
+
+.input-group {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.input-group label {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+form button {
+  margin-top: 20px;
+  border: none;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
 }

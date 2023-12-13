@@ -5,6 +5,22 @@
 {% endblock %}
 {% block content %}
 <form method="post" enctype="multipart/form-data" id="upload-form">
+    <div class="input-group">
+        <label for="cdp">N° de Certificado de Factibilidad</label>
+        <input type="text" name="cdp" id="cdp">
+    </div>
+    <div class="input-group">
+        <label for="datecdp">Fecha de Certificado de Factibilidad</label>
+        <input type="date" name="datecdp" id="datecdp">
+    </div>
+    <div class="input-group">
+        <label for="datecompra">Fecha de Ingreso de la propuesta a Mercado Público</label>
+        <input type="date" name="datecompra" id="datecompra">
+    </div class="input-group">
+    <div class="input-group">
+        <label for="responsable">Dirección que será responsable de la propuesta</label>
+        <input type="text" name="responsable" id="responsable">
+    </div>
     <div class="file-drop-area">
         <input type="file" name="file" id="file" class="file-input" required>
         <label for="file" class="file-label">Selecciona un archivo o arrástralo aquí</label>

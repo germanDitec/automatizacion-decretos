@@ -56,14 +56,11 @@ def extract_num_decreto(pdf_file):
 
         for page in pdf_reader.pages:
             texto = page.extract_text()
-
             coincidencias = re.findall(r'Nº(\d+)', texto)
 
             if coincidencias:
-
                 numero = coincidencias[0]
                 break
-
     return numero
 
 
@@ -74,10 +71,7 @@ def extract_id_decreto(pdf_file):
 
         for page in pdf_reader.pages:
             texto = page.extract_text()
-
-
             coincidencia = re.search(r'ID:\s*(.+)', texto)
-
 
             if coincidencia:
                 texto_despues_de_id = coincidencia.group(1).strip()
@@ -324,7 +318,7 @@ def get_evaluacion(pdf_path):
         evaluacion_prompt = openai.ChatCompletion.create(
             model= "gpt-4-1106-preview",
             messages = [
-                {"role" : "system", "content": "Quiero que analices el texto que solicito y me retornes lo que te pido, el contexto del texto es sobre una comisión evaluadora que ha realizado un informe."},
+                {"role" : "system", "content": "Quiero que analices el texto que solicito y me retornes lo que te pido, el contexto del texto es sobre una comisión evaluadora que ha realizado un informe. No escribas porcentajes y utiliza un lenguaje muy formal"},
                 {"role" : "user", "content" : evaluacion_page}
                 ]
             )
@@ -368,7 +362,6 @@ def get_datos_adjudicacion(pdf_path):
         data_adjudicacion = adjudicacion_prompt.choices[0].message.content
         data = json.loads(data_adjudicacion)
         empresas = data.get("empresas", [])
-        print("empresas:", empresas)
         return empresas
     except:
         return abort(400)
@@ -384,7 +377,7 @@ def get_inadmisibles_text(inadmisibles):
     proponentes_inadmisible = "; ".join(fragmentos_texto_inadmisible)
     return proponentes_inadmisible
 
-def add_inadmisibles_decreto(doc, inadmisibles, id, titulo,nombre_adjudicada, rut_adjudicada, total, plazo):
+def add_inadmisibles_decreto(inadmisibles, id, titulo,nombre_adjudicada, rut_adjudicada, total, plazo):
     proponentes_inadmisible = get_inadmisibles_text(inadmisibles)
     decreto_segundo = f"2.- Declárense inadmisibles las ofertas de la empresa {proponentes_inadmisible}, según los argumentos señalados en el considerando cuarto."
     decreto_tercero = f"3.- Adjudiquese la Propuesta Pública ID {id}, denominada {titulo}, al proponente {nombre_adjudicada}, RUT {rut_adjudicada}, por la suma total de ${total} (REFLEJAR EL VALOR EN TEXTO), para entregar los productos en un plazo de {plazo}."
@@ -394,7 +387,7 @@ def add_inadmisibles_decreto(doc, inadmisibles, id, titulo,nombre_adjudicada, ru
     decreto_septimo = f"7.- Designese como Unidad Técnica responsable de la gestión y administración de la orden de compra y que actuará como Inspección Técnica, será la Dirección XXXXXXX."
     return decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto, decreto_sexto, decreto_septimo
 
-def add_no_inadmisible_decreto(doc, id, titulo, nombre_adjudicada, rut_adjudicada, total, plazo):
+def add_no_inadmisible_decreto(id, titulo, nombre_adjudicada, rut_adjudicada, total, plazo):
     decreto_segundo = f"2.- Adjudiquese la Propuesta Pública ID {id}, denominada {titulo}, al proponente {nombre_adjudicada}, RUT {rut_adjudicada}, por la suma total de ${total} (REFLEJAR EL VALOR EN TEXTO), para entregar los productos en un plazo de {plazo}."
     decreto_tercero = f"3.- El precio del contrato de compra será el valor que pague la Municipalidad al contratista por el servicio contratado y debidamente ejecutados, sobre la base de los valores unitarios ofertados y el monto total ofertado. / Emitase la Orden de Compra correspondiente a nombre del proponente adjudicado, por el monto informado en el numeral precedente"
     decreto_cuarto = f"4.- Imputese el gasto que involucra la presente adjudicación a la cuenta XXXXXXXX."
@@ -402,7 +395,7 @@ def add_no_inadmisible_decreto(doc, id, titulo, nombre_adjudicada, rut_adjudicad
     decreto_sexto = f"6.- Designese como Unidad Técnica responsable de la gestión y administración de la orden de compra y que actuará como Inspección Técnica, será la Dirección XXXXXXX."
     return decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto, decreto_sexto
 
-def add_inadmisibles_no_rechazados(doc, proponentes_inadmisible, id, titulo, nombre_adjudicada, rut_adjudicada, total, plazo):
+def add_inadmisibles_no_rechazados(proponentes_inadmisible, id, titulo, nombre_adjudicada, rut_adjudicada, total, plazo):
     decreto_primero = f"1.- Declárense inadmisibles las ofertas de la empresa {proponentes_inadmisible}, por los argumentos senalados en el considerando cuarto."
     decreto_segundo = f"2.- Adjudiquese la Propuesta Pública ID {id}, denominada {titulo}, al proponente {nombre_adjudicada}, RUT {rut_adjudicada}, por la suma total de ${total} (REFLEJAR EL VALOR EN TEXTO), para entregar los productos en un plazo de {plazo}."
     decreto_tercero = f"3.- El precio del contrato de compra será el valor que pague la Municipalidad al contratista por el servicio contratado y debidamente ejecutados, sobre la base de los valores unitarios ofertados y el monto total ofertado. / Emitase la Orden de Compra correspondiente a nombre del proponente adjudicado, por el monto informado en el numeral precedente"
@@ -412,14 +405,42 @@ def add_inadmisibles_no_rechazados(doc, proponentes_inadmisible, id, titulo, nom
     return decreto_primero, decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto, decreto_sexto
 
 
-def add_noadm_norec(doc, id, titulo, nombre_adjudicada, rut_adjudicada, total, plazo):
+def add_noadm_norec(id, titulo, nombre_adjudicada, rut_adjudicada, total, plazo):
     decreto_primero = f"1.- Adjudiquese la Propuesta Pública ID {id}, denominada {titulo}, al proponente {nombre_adjudicada}, RUT {rut_adjudicada}, por la suma total de ${total} (REFLEJAR EL VALOR EN TEXTO), para entregar los productos en un plazo de {plazo}."
     decreto_segundo = f"2.- El precio del contrato de compra será el valor que pague la Municipalidad al contratista por el servicio contratado y debidamente ejecutados, sobre la base de los valores unitarios ofertados y el monto total ofertado. / Emitase la Orden de Compra correspondiente a nombre del proponente adjudicado, por el monto informado en el numeral precedente"
     decreto_tercero = f"3.- Imputese el gasto que involucra la presente adjudicación a la cuenta XXXXXXX."
     decreto_cuarto = f"4.- La Secretaria Comunal de Planificación dispondrá la publicación del presente Decreto en el Sistema de Información de Compras y Contratación Pública (www.mercadopublico.cl), según lo dispuesto en el Articulo 57° del Reglamento de la Ley N° 19.886."
     decreto_quinto = f"5.- Designese como Unidad Técnica responsable de la gestión y administración de la orden de compra y que actuará como Inspección Técnica, será la Dirección XXXXXXX."
     return decreto_primero, decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto
- 
+
+def add_decretos_lineas(id, titulo, rechazadas, inadmisibles, empresas_adjudicadas): #LLAMAR DOC
+    decretos_adjudicados = []
+    start = 0
+    if rechazadas:
+        decreto_primero = f"1.- Declárense rechazadas las ofertas de los proponentes {rechazados}, según los argumentos señalados en el considerando tercero."
+        if inadmisibles:
+            proponentes_inadmisible = get_inadmisibles_text(inadmisibles)
+            decreto_segundo = f"2.- Declárense inadmisibles las ofertas de la empresa {proponentes_inadmisible}, por los argumentos senalados en el considerando cuarto."
+            start += 2
+        start += 1
+
+    if inadmisibles and not rechazadas:
+        proponentes_inadmisible = get_inadmisibles_text(inadmisibles)
+        decreto_primero = f"1.- Declárense inadmisibles las ofertas de la empresa {proponentes_inadmisible}, por los argumentos senalados en el considerando tercero."
+        start += 1
+
+    for indice, empresa in enumerate(empresas_adjudicadas, start=start): #EMPEZAR DESDE RECHAZADAS O INADMISIBLES
+        nombre = empresa.get('nombre')
+        rut = empresa.get('RUT')
+        total = empresa.get('total')
+        plazo = empresa.get('plazo')
+        linea = empresa.get('linea')
+
+        decreto_adjudicacion = f"{indice}.- Adjudiquese la Propuesta Pública ID {id}, denominada {titulo}, Línea N°{linea}, al proponente {nombre} RUT {rut}, por la suma total de ${total} (REFLEJAR EL VALOR EN TEXTO), para entregar los productos en un plazo de {plazo}."
+        decretos_adjudicados.append(decreto_adjudicacion)
+
+    return decreto_primero, decreto_segundo, decretos_adjudicados
+
 
 @bp.route("/generate/<filename>", methods=['GET'])
 def generate_word(filename):
@@ -436,7 +457,7 @@ def generate_word(filename):
             fecha_comision = extract_date_below_keyword(pdf_path, "CONSTITUCIÓN Y SESIONES DE LA COMISIÓN EVALUADORA")
             modified_paragraph = f"el Decreto Alcaldicio N° {n_decreto} de fecha {fecha_decreto}, que aprueba las Bases Administrativas, Bases Técnicas, Anexos y demás antecedentes de la licitación;"
             primer_parrafo = "La propuesta Pública con ID " + id + " denominada " + titulo + " "  + modified_paragraph + " El Acto de Apertura de Ofertas, de fecha " + fecha_apertura + "; el Informe de Evaluación de la comisión evaluadora, de fecha " +  fecha_comision + "; el Certificado de Factibilidad N° X/XX, de fecha XX de XXXXX; el Acta de Proclamación de Alcalde y Concejales de la comuna de Maipú, de fecha 22 de junio de 2021, del Primer Tribunal Electoral Región Metropolitana, que proclamó como alcalde de la comuna de Maipú, al don TOMÁS VODANOVIC ESCUDERO; el Decreto Alcaldicio N°1656 DAP, de fecha 17 de junio del 2020, que designa como Secretario Municipal a don RICARDO HENRIQUEZ VALDÉS; la Ley N°19.886 de Bases sobre Contratos Administrativos de Suministro y Prestación de Servicios y su respectivo Reglamento, el cual fue aprobado mediante Decreto Supremo N° 250, del año 2004, del Ministerio de Hacienda y sus modificaciones; y las facultades conferidas en el articulo 63 del D.F.L.N°1, del año 2006, del Ministerio del Interior, que fijo el texto refundido, coordinado y sistematizado de la Ley N°18.695, Organica Constitucional de Municipalidades."
-            considerando_primer = "1.- Que, con fecha XX de XXXXX de 2023, se publicó en el Sistema de Información de Compras y Contratación Pública (www.mercadopublico.cl), la propuesta pública {id}, denominada {titulo}, según Bases administrativas y Técnicas, aprobadas por Decreto Alcaldicio N° XXXX, de fecha XX de XXXX de 2023".format(id=id, titulo=titulo)
+            considerando_primer = f"1.- Que, con fecha XX de XXXXX de 2023, se publicó en el Sistema de Información de Compras y Contratación Pública (www.mercadopublico.cl), la propuesta pública {id}, denominada {titulo}, según Bases administrativas y Técnicas, aprobadas por Decreto Alcaldicio N°{n_decreto} de fecha {fecha_decreto}"
             considerando_segundo = "2.- Que, en el llamado a licitación los siguientes proponentes presentaron ofertas:"
             considerando_tercer = ""
             rechazados = get_rechazados(pdf_path)
@@ -444,19 +465,22 @@ def generate_word(filename):
             data_evaluacion = get_evaluacion(pdf_path)
             empresas_adjudicadas = get_datos_adjudicacion(pdf_path)
             fragmento_adjudicadas = []
+            posee_linea = False
             for empresa in empresas_adjudicadas:
                 nombre_adjudicada = empresa.get("nombre", "")
                 rut_adjudicada = empresa.get("RUT", "")
                 linea = empresa.get("linea", None)
                 total = empresa.get("total", "")
                 plazo = empresa.get("plazo", "")
-                fragmento_empresas = f"{nombre_adjudicada}, RUT {rut_adjudicada}, {linea}"
+                fragmento_empresas = f"{nombre_adjudicada} RUT {rut_adjudicada}, {linea}"
                 fragmento_adjudicadas.append(fragmento_empresas)
                 proponentes_adjudicados = "; ".join(fragmento_adjudicadas)
                 if linea is not None:
                     lista_empresa_adjudicada = f"- Del resultado de la evaluación, se establece que la oferta presentada por los proponentes {proponentes_adjudicados} . Son más convenientes para los intereses municipales, por lo que se propone su adjudicación"
+                    posee_linea = True
                 else:
                     lista_empresa_adjudicada = f"- Del resultado de la evaluación, se establece que la oferta presentada por el proponente {nombre_adjudicada}, RUT {rut_adjudicada}. Es más conveniente para los intereses municipales, por lo que se propone su adjudicación"
+            
 
             decreto_primero = ""
             decreto_segundo =""
@@ -472,18 +496,21 @@ def generate_word(filename):
 
                 decreto_primero = f"1.- Declárense rechazadas las ofertas de los proponentes {proponentes_rechazados}, según los argumentos señalados en el considerando tercero."
                 if inadmisibles:
-                    decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto, decreto_sexto, decreto_septimo = add_inadmisibles_decreto(doc, inadmisibles, id, titulo,nombre_adjudicada, rut_adjudicada, total, plazo)
+                    decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto, decreto_sexto, decreto_septimo = add_inadmisibles_decreto(inadmisibles, id, titulo,nombre_adjudicada, rut_adjudicada, total, plazo)
                 else:
-                    decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto = add_no_inadmisible_decreto(doc, id, titulo, nombre_adjudicada, rut_adjudicada, total, plazo)
+                    decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto = add_no_inadmisible_decreto(id, titulo, nombre_adjudicada, rut_adjudicada, total, plazo)
             else:
                 considerando_tercer = "\n3.- Que, en el Acto de Apertura de las ofertas, de fecha {}, no existen ofertas rechazadas.".format(fecha_apertura)
                 lista_rechazados = ""
                 if inadmisibles:
                     proponentes_inadmisible = get_inadmisibles_text(inadmisibles)
-                    decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto, decreto_sexto = add_inadmisibles_no_rechazados(doc, proponentes_inadmisible, id, titulo,nombre_adjudicada, rut_adjudicada, total, plazo)
+                    decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto, decreto_sexto = add_inadmisibles_no_rechazados(proponentes_inadmisible, id, titulo,nombre_adjudicada, rut_adjudicada, total, plazo)
 
             if not rechazados and not inadmisibles:
-                decreto_primero, decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto = add_noadm_norec(doc, id, titulo, nombre_adjudicada, rut_adjudicada, total, plazo)
+                decreto_primero, decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto = add_noadm_norec(id, titulo, nombre_adjudicada, rut_adjudicada, total, plazo)
+
+            # if posee_linea:
+            #     add_decretos_lineas(empresas_adjudicadas)
            
             considerando_cuarto = "\n4.-Que de acuerdo con el informe de Evaluación de Ofertas, de fecha {}, la comisión evaluadora propone lo siguiente:".format(fecha_informe)
             considerando_quinto = "\n5.- Que, se cuenta con la disponibilidad presupuestaria para este fin, según da cuenta el Certificado de Factibilidad N° X/XX, de fecha xx de xxxx de 2023."

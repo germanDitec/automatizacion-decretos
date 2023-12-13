@@ -4,9 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% endblock title %} - Maipú</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block css %}{% endblock css %}
 </head>
 <body>
+    <header>
+        <nav>
+           <a href="{{ url_for('home.index') }}"><img src="{{ url_for('static', filename='img/logomaipu.png') }}" width="300px" /></a>
+           <h2>Generador de Decretos</h2>
+            <ul>
+                <li><a href="{{ url_for('home.index') }}">Home</a></li>
+                <li><a href="{{ url_for('home.index') }}">Sobre el Proyecto</a></li>
+            </ul>
+        </nav>
+    </header>
+
 
     <section>
         {% for message in get_flashed_messages() %}
