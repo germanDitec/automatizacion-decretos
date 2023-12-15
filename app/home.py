@@ -19,6 +19,8 @@ from docxtpl import DocxTemplate
 import shutil
 import mammoth
 
+from app.auth import login_required
+
 
 bp = Blueprint('home', __name__, url_prefix= "/")
 
@@ -235,6 +237,7 @@ def extract_last_page(pdf_file):
         return text
 
 @bp.route("/", methods=["GET", "POST"])
+@login_required
 def index():
     if request.method == 'POST' and 'file' in request.files:
         pdf_file = request.files['file']
@@ -441,8 +444,8 @@ def add_decretos_lineas(id, titulo, rechazadas, inadmisibles, empresas_adjudicad
 
     return decreto_primero, decreto_segundo, decretos_adjudicados
 
-
 @bp.route("/generate/<filename>", methods=['GET'])
+@login_required
 def generate_word(filename):
     if filename.endswith(".pdf"):
         try:
@@ -568,6 +571,7 @@ def generate_word(filename):
                 return f"Error inesperado {str(e)}"
 
 @bp.route("/download/<filename>")
+@login_required
 def download_file(filename):
     output_file_path = filename.replace(".pdf", "-PLANTILLA_DECRETO.docx")
     return send_from_directory('static/documents_folder', output_file_path, as_attachment=True)

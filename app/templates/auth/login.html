@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Pagina de inicio{% endblock title %}
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+{% endblock %}
+{% block content %}
+<form method="post" enctype="multipart/form-data" id="upload-form">
+    <div class="input-group">
+        <label for="email">Email</label>
+        <input type="email" name="email" id="email">
+    </div>
+    <div class="input-group">
+        <label for="pass">Contraseña</label>
+        <input type="password" name="pass" id="pass">
+    </div>
+    <button type="submit">Ingresar</button>
+</form>
+{% endblock content %}
+{% block js %}
+<script src="{{ url_for('static', filename='js/dragAndDrop.js') }}"></script>
+ 
+{% endblock %}
