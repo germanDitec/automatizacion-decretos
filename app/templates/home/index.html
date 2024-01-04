@@ -6,20 +6,101 @@
 {% block content %}
 <form method="post" enctype="multipart/form-data" id="upload-form">
     <div class="input-group">
+        <label for="idp">ID de la propuesta</label>
+        <input type="text" name="idp" id="idp" placeholder="XXXX-XX-XXXX">
+    </div>
+
+    <div class="input-group">
+        <label for="idp">Titulo de la propuesta</label>
+        <input type="text" name="titulo" id="titulo" placeholder="Renovación y adquisición de equipos">
+    </div>
+
+    <div class="input-group">
         <label for="cdp">N° de Certificado de Factibilidad</label>
-        <input type="text" name="cdp" id="cdp">
+        <input type="text" name="cdp" id="cdp" placeholder="925">
     </div>
     <div class="input-group">
         <label for="datecdp">Fecha de Certificado de Factibilidad</label>
         <input type="date" name="datecdp" id="datecdp">
     </div>
     <div class="input-group">
-        <label for="datecompra">Fecha de Ingreso de la propuesta a Mercado Público</label>
+        <label for="datecompra">Fecha de publicación de la propuesta en Mercado Público</label>
         <input type="date" name="datecompra" id="datecompra">
     </div>
     <div class="input-group">
-        <label for="direccion">Dirección responsable de la propuesta</label>
-        <input type="text" name="direccion" id="direccion">
+        <label for="total">N° de Cuenta de pago</label>
+        <input type="number" name="cuenta" id="cuenta" placeholder="1234567891">
+    </div>
+    <div class="input-group">
+        <label for="concejo">¿La propuesta pasó por concejo?</label>
+        <div class="checkbox">
+            <label for="concejo">Sí</label>
+            <input id="checkconcejo" type="checkbox" name="concejo" id="concejo">
+        </div>
+    </div>
+
+    <div class="input-group concejo">
+        <label for="sesion">Número de Acuerdo de la propuesta de adjudicación</label>
+        <input type="number" name="acuerdo" id="acuerdo" placeholder="1123">
+    </div>
+
+    <div class="input-group concejo">
+        <label for="sesion">Número Sesión Ordinaria del Concejo Municipal</label>
+        <input type="number" name="sesion" id="sesion" placeholder="1123">
+    </div>
+
+    <div class="input-group concejo">
+        <label for="sesion">Fecha de la Sesión Ordinaria</label>
+        <input type="date" name="datesesion" id="datesesion">
+    </div>
+
+    <div class="input-group concejo">
+        <label for="secretaria">Número de certificado de Secretaria Municipal</label>
+        <input type="number" name="secretaria" id="secretaria" placeholder="125">
+    </div>
+
+    <div class="input-group">
+        <label for="compra">Tipo de compra</label>
+        <div class="radio">
+        <label>Productos</label>
+        <input type="radio" name="compra" id="compra" value="productos">
+        <label id="servicios">Servicios</label>
+        <input type="radio" name="compra" id="compra" value="servicios">
+        </div>
+    </div>
+
+    <div class="input-group">
+        <label for="propuesta">Tipo de propuesta</label>
+        <select name="propuesta" id="propuesta">
+            <option value="0">-- Seleccione Propuesta --</option>
+            <option value="1">Orden de Compra</option>
+            <option value="2">Contrato</option>
+            <option value="3">Contrato y Orden de Compra</option>
+            <option value="4">Orden de Compra con Acuerdo Complementario</option>
+        </select>
+    </div>
+
+    <div class="input-group">
+        <label for="direccion">Unidad Técnica responsable de la propuesta</label>
+        <select name="direccion" id="direccion">
+            <option value="0">-- Seleccione Dirección --</option>
+            <option value="1">Dirección de Administración y Finnanzas (DAF)</option>
+            <option value="2">Dirección de Asesoria Juridica (DAJ)</option>
+            <option value="3">Dirección de Control</option>
+            <option value="4">Secretaria Comunal de Planificación (SECPLA)</option>
+            <option value="5">Dirección de Aseo, Ornato y Gestión Ambiental (DAOGA)</option>
+            <option value="6">Dirección de Transito y Transporte Público</option>
+            <option value="7">Dirección de Operaciones</option>
+            <option value="8">Dirección de Riesgos, Desastres y Emergencias (DRDE)</option>
+            <option value="9">Dirección de Inspección</option>
+            <option value="10">Dirección de Prevención y Seguridad Ciudadana (DIPRESEC)</option>
+            <option value="11">Dirección de Tecnología y Comunicaciones (DITEC)</option>
+            <option value="13">Dirección de Salud Municipal (DISAM)</option>
+            <option value="14">Dirección de Desarrollo Comunitario (DIDECO)</option>
+            <option value="15">Dirección de Obras Municipales (DOM)</option>
+            <option value="16">Servicio Municipal de Agua Potable y Alcantarillado (SMAPA)</option>
+        </select>
+
     </div>
     <div class="file-drop-area">
         <input type="file" name="file" id="file" class="file-input" required>
@@ -30,5 +111,31 @@
 {% endblock content %}
 {% block js %}
 <script src="{{ url_for('static', filename='js/dragAndDrop.js') }}"></script>
- 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+        const h2 = document.querySelector('#title');
+        if (h2) {
+            h2.style.marginLeft = '100px';
+        }
+
+        const checkconcejo = document.querySelector('#checkconcejo');
+        const divConcejo = document.querySelectorAll('.concejo');
+        if (checkconcejo) {
+            checkconcejo.addEventListener('change', function() {
+                if (this.checked) {
+                    divConcejo.forEach(function(div) {
+                        div.style.display = 'flex';
+                    });
+
+                } else {
+                    divConcejo.forEach(function(div) {
+                        div.style.display = 'none';
+                    })
+                }
+            });
+        }
+
+        });
+
+    </script>
 {% endblock %}

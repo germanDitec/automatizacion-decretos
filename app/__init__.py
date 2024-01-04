@@ -14,11 +14,13 @@ def create_app():
     
     from . import home
     from . import auth
+    from . import about
     
     db.init_app(app)
 
     app.register_blueprint(home.bp)
     app.register_blueprint(auth.bp)
+    app.register_blueprint(about.bp)
 
 
     return app

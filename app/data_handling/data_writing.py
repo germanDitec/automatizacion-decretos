@@ -27,7 +27,7 @@ def add_table_to_word_document(doc, table):
     for i, row in enumerate(table):
         for j, cell in enumerate(row):
             if i == 0 and j == 1:
-                doc_table.cell(i, 1).text = "Proponente"
+                doc_table.cell(i, 1).text = "OFERENTE"
                 doc_table.cell(i, 1).bold = True
 
             else:

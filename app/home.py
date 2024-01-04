@@ -1,34 +1,37 @@
 from flask import (Blueprint, render_template, request, flash, send_file, redirect, url_for, Response, g, send_from_directory, session)
 from werkzeug.utils import secure_filename
 from docx import Document
-from docx.shared import Inches
+from docx.shared import Inches, Pt
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 import os
 import json
-import base64
 import mammoth
 from app.auth import login_required
 
 from app.data_handling.data_extracting import (extract_table_from_pdf, extract_paragraph_after_keyword, extract_num_decreto, extract_id_decreto, 
 extract_paragraphs_containing_keyword, replace_word_in_paragraph, extract_line_below_propuesta_publica, add_indented_paragraph, extract_date_from_keyword, 
-extract_date_below_keyword, extract_date_from_last_page, extract_last_page)
+extract_date_below_keyword, extract_date_from_last_page, extract_last_page, obtener_direccion, obtener_propuesta)
 
-from app.data_handling.data_managing import (get_rechazados_text, get_inadmisibles_text, 
-add_inadmisibles_decreto, add_no_inadmisible_decreto, add_inadmisibles_no_rechazados, add_noadm_norec, add_decretos_lineas)
+from app.data_handling.data_managing import (get_rechazados_text, get_inadmisibles_text, add_inadmisibles_decreto, add_no_inadmisible_decreto, 
+add_inadmisibles_no_rechazados, add_noadm_norec, add_decretos_lineas, formate_date_text, informe_to_sharepoint, decreto_to_sharepoint)
 
-from app.data_handling.data_managing import formate_date_text
 from app.data_handling.data_writing import generate_word_document, add_table_to_word_document
 
 import openai
 from flask import abort
 import json
-openai.api_key = "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"
-
-
+openai.api_key = "API-KEY"
 
 bp = Blueprint('home', __name__, url_prefix= "/")
 
 SESSION_TYPE = 'filesystem'
 ALLOWED_EXTENSIONS = {'pdf'}
+#CUENTA SHAREPOINT, DEBE IR EN VARIABLES DE SESIÓN
+username = 'CORREO'
+password = 'CONTRASEÑA'
+server_url = "https://immaipu.sharepoint.com/"
+site_url = server_url + "sites/Generadordedecretos"
+
 image_path = os.path.join(os.path.dirname(__file__), "encabezado_decretos.png")
 
 def allowed_file(filename):
@@ -36,44 +39,62 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @bp.route("/", methods=["GET", "POST"])
+@login_required
 def index():
     if request.method == 'POST' and 'file' in request.files:
+        idp = request.form.get('idp')
+        titulo = request.form.get('titulo')
         cdp = request.form.get('cdp')
         datecdp = request.form.get('datecdp')
+        cuenta = request.form.get('cuenta')
         datecompra = request.form.get('datecompra')
         direccion = request.form.get('direccion')
-        
-        pdf_file = request.files['file']
+        concejo = request.form.get('concejo')
+        acuerdo = request.form.get('acuerdo')
+        sesion = request.form.get('sesion')
+        datesesion = request.form.get('datesesion')
+        secretaria = request.form.get('secretaria')
 
+        propuesta = request.form.get('propuesta')
+        tipo_compra = request.form.get('compra')
+
+        if concejo != 'on':
+            sesion = None
+            datesesion = None
+            secretaria = None
+
+        error = None
+
+        if not all([cdp, datecdp, datecompra, direccion]):
+            error = "Por favor, rellena todos los campos."
+            return render_template("home/index.html")
+
+        valor_direccion = obtener_direccion(direccion)
+        if direccion == "0":
+            error = "Por favor, rellena todos los campos."
+
+        if propuesta == "0":
+            error = "Por favor, rellena todos los campos."
+
+        pdf_file = request.files['file']
         if pdf_file and allowed_file(pdf_file.filename):
             filename = secure_filename(pdf_file.filename)
             upload_folder = 'app/static/documents_folder'
             os.makedirs(upload_folder, exist_ok=True)
             file_path = os.path.join(upload_folder, filename)
             pdf_file.save(file_path)
+            informe_to_sharepoint(server_url, username, password, site_url, file_path, filename)
             session['process_ejected'] = False
+            return redirect(url_for('home.generate_word', filename=filename, idp=idp, cdp=cdp, datecdp=datecdp, datecompra=datecompra, 
+            direccion=valor_direccion, concejo=concejo, acuerdo=acuerdo, sesion=sesion, datesesion=datesesion, 
+            secretaria=secretaria, cuenta=cuenta, propuesta=propuesta, tipo_compra=tipo_compra, titulo=titulo))
 
-            
-            return redirect(url_for('home.generate_word', filename=filename, cdp=cdp, datecdp=datecdp, datecompra=datecompra, direccion=direccion))
-    else:
-        return render_template("home/index.html")
-
-@bp.route("/prueba/<filename>", methods=['GET'])
-def prueba(filename):
-    cdp = request.args.get('cdp')
-    print(cdp)
-    datecdp = request.args.get('datecdp')
-    print(datecdp)
-    datecompra = request.args.get('datecompra')
-    print(datecompra)
-    direccion = request.args.get('direccion')
-    print(direccion)
-    return "lala"
-
+        flash(error)
+    return render_template("home/index.html")
 
 def get_rechazados(pdf_path):
     try:
-        input_promt = """Verifica si en los parrafos que comienzan con este caracter '•' hay algún proponente que se rechaza, y si es así retornalos en formato JSON y hazlo con la siguiente estructura: 
+        input_promt = """Verifica si en los parrafos que comienzan con este caracter '•' hay algún proponente que fué rechazado, y si es así retornalos en formato JSON y hazlo con la siguiente estructura: 
             rechazados: [
             nombre: nombre empresa, 
             RUT: rut empresa, 
@@ -81,7 +102,6 @@ def get_rechazados(pdf_path):
             Y el caso de que no haya ningún proponente rechazado, retorna este json vacio:
                 rechazados:[] 
             Solo quiero el JSON, no incluyas texto adicional, haz esto en base a este texto y los parrafos que no comiencen con '•' ignoralos. {}"""
-
 
         paragraphs_propmt = input_promt.format(extract_paragraphs_containing_keyword(pdf_path, "OBSERVACIONES DEL ACTO DE APERTURA"))
         rechazados_prompt = openai.ChatCompletion.create(
@@ -97,6 +117,7 @@ def get_rechazados(pdf_path):
         rechazados = datos.get("rechazados", [])
         print("rechazados:", rechazados)
         return rechazados
+
     except:
         return []
  
@@ -127,32 +148,35 @@ def get_inadmisibles(pdf_path):
         inadmisibles = datos.get("inadmisibles", [])
         print("inadmisibles:", inadmisibles)
         return inadmisibles
+
     except:
         return []
  
 def get_evaluacion(pdf_path):
     try:
 
-        evaluacion_input = "Quiero que hagas un extenso resumen SOLO del parrafo de 'ADMISIBILIDAD', lo demás ignoralo, redacta el resumen sin especificar que es lo que te pedí ni tampoco mencionando el parrafo 8.1. También quiero que me listes con viñetas el resumen, recuerda retornar en texto sin formato, haz esto en base a este texto: {}"
-        evaluacion_page = evaluacion_input.format(extract_paragraphs_containing_keyword(pdf_path, "PROCEDIMIENTO DE EVALUACIÓN DE LAS OFERTAS"))
+        evaluacion_input = "Quiero que hagas un resumen de los proponentes desde el parrafo de 'ADMISIBILIDAD',  redacta el resumen sin especificar que es lo que te pedí ni tampoco mencionando el parrafo 8.1. También quiero que me listes con viñetas el resumen, recuerda retornar en texto sin formato, haz esto en base a este texto: {}"
+        evaluacion_page = evaluacion_input.format(extract_paragraphs_containing_keyword(pdf_path, "ADMISIBILIDAD"))
 
         evaluacion_prompt = openai.ChatCompletion.create(
             model= "gpt-4-1106-preview",
             messages = [
-                {"role" : "system", "content": "Quiero que analices el texto que solicito y me retornes lo que te pido, el contexto del texto es sobre una comisión evaluadora que ha realizado un informe. No escribas porcentajes y utiliza un lenguaje muy formal"},
+                {"role" : "system", "content": "Quiero que analices el texto que solicito y me retornes lo que te pido, el contexto del texto es sobre una comisión evaluadora que ha realizado un informe. Esto ya pasó entonces escribe en tiempo pasado, no quiero que agregues porcentajes y utiliza un lenguaje muy formal"},
                 {"role" : "user", "content" : evaluacion_page}
                 ]
             )
 
         data_evaluacion = evaluacion_prompt.choices[0].message.content
-        print("data evaluacion: ", data_evaluacion)
+        print("PROMPT EVALUACIÓN: ", evaluacion_page)
         return data_evaluacion
+
     except: 
         return abort(400)
 
 def get_datos_adjudicacion(pdf_path):
     try:
-        adjudicacion = """Quiero que me retornes nombre, RUT y monto total de la o las empresas que hayan sido nombradas en formato JSON, extrae la información desde el párrafo de 'PROPOSICIÓN DE ADJUDICACIÓN'. Retorna solo el JSON con la siguiente estructura: 
+        adjudicacion = """Quiero que me retornes nombre, RUT y monto total de la o las empresas que hayan sido nombradas. Esto en formato JSON, extrae la información desde el párrafo de 'PROPOSICIÓN DE ADJUDICACIÓN'. Retorna solo el JSON con la siguiente estructura. 
+        En el caso de que existan más lineas en el parrafo de 'PROPOSICIÓN DE ADJUDICACION', retorna con el siguiente formato:
             empresas: [
             nombre: nombre empresa, 
             RUT: rut empresa,
@@ -175,7 +199,7 @@ def get_datos_adjudicacion(pdf_path):
                 model= "gpt-4-1106-preview",
                 response_format = {"type": "json_object"},
                 messages = [
-                    {"role" : "system", "content": "Quiero que actues como un asistente y analices el texto que te estoy entregando y me retornes un JSON, solo con lo que te pido, sin añadir texto adicional. El contexto del texto es sobre una comisión evaluadora."},
+                    {"role" : "system", "content": "Quiero que analices el texto que te estoy entregando y me retornes un JSON, solo con lo que te pido, sin añadir texto adicional. El contexto del texto es sobre una comisión evaluadora."},
                     {"role" : "user", "content" : adjudicacion_page}
                 ]
             )
@@ -185,11 +209,13 @@ def get_datos_adjudicacion(pdf_path):
         empresas = data.get("empresas", [])
         print("empresas: ", empresas)
         return empresas
+
     except:
         return abort(400)
 
 
 @bp.route("/generate/<filename>", methods=['GET'])
+@login_required
 def generate_word(filename):
     if filename.endswith(".pdf"):
         try:
@@ -197,30 +223,52 @@ def generate_word(filename):
             if regenerate.lower() == 'true':
                 session['process_ejected'] = False
 
-            if session.get('process_ejected'):
-                return render_template('home/process.html', html=session.get('generated_document', ''), filename=filename, cdp=cdp, datecdp=datecdp, datecompra=datecompra, direccion=direccion)
-
-
             doc = Document()
             pdf_path = os.path.join('app/static/documents_folder', filename)
             cdp = request.args.get('cdp')
+            cuenta = request.args.get('cuenta')
+            concejo = request.args.get("concejo")
+            acuerdo = request.args.get('acuerdo')
+            sesion = request.args.get('sesion')
+            datesesion = request.args.get('datesesion')
+            if datesesion is not None:
+                datesesion_str = formate_date_text(datesesion)
+            secretaria = request.args.get('secretaria')
             datecdp = request.args.get('datecdp')
             datecompra = request.args.get('datecompra')
             datecdp_str = formate_date_text(datecdp)
             datecompra_str = formate_date_text(datecompra)
             direccion = request.args.get('direccion')
             n_decreto = extract_num_decreto(pdf_path)
-            id = extract_id_decreto(pdf_path)
-            titulo = extract_line_below_propuesta_publica(pdf_path)
+            idp = request.args.get('idp')
+            titulo= request.args.get('titulo')
+            titulo = titulo.upper()
+            propuesta = request.args.get('propuesta')
+            valor_propuesta = obtener_propuesta(propuesta)
+            tipo_compra = request.args.get('tipo_compra')
             fecha_apertura = extract_date_from_keyword(pdf_path, "El Acto de Apertura")
             fecha_informe = extract_date_from_last_page(pdf_path)
             fecha_decreto = extract_date_from_keyword(pdf_path, "Decreto Alcaldicio")
             fecha_comision = extract_date_below_keyword(pdf_path, "CONSTITUCIÓN Y SESIONES DE LA COMISIÓN EVALUADORA")
             modified_paragraph = f"el Decreto Alcaldicio N° {n_decreto} de fecha {fecha_decreto}, que aprueba las Bases Administrativas, Bases Técnicas, Anexos y demás antecedentes de la licitación;"
-            primer_parrafo = f"La propuesta Pública con ID {id} denominada {titulo}  {modified_paragraph}  El Acto de Apertura de Ofertas, de fecha {fecha_apertura}; el Informe de Evaluación de la comisión evaluadora, de fecha {fecha_comision}; el Certificado de Factibilidad N° {cdp}, de fecha {datecdp_str}; el Acta de Proclamación de Alcalde y Concejales de la comuna de Maipú, de fecha 22 de junio de 2021, del Primer Tribunal Electoral Región Metropolitana, que proclamó como alcalde de la comuna de Maipú, al don TOMÁS VODANOVIC ESCUDERO; el Decreto Alcaldicio N°1656 DAP, de fecha 17 de junio del 2020, que designa como Secretario Municipal a don RICARDO HENRIQUEZ VALDÉS; la Ley N°19.886 de Bases sobre Contratos Administrativos de Suministro y Prestación de Servicios y su respectivo Reglamento, el cual fue aprobado mediante Decreto Supremo N° 250, del año 2004, del Ministerio de Hacienda y sus modificaciones; y las facultades conferidas en el articulo 63 del D.F.L.N°1, del año 2006, del Ministerio del Interior, que fijo el texto refundido, coordinado y sistematizado de la Ley N°18.695, Organica Constitucional de Municipalidades."
-            considerando_primer = f"1.- Que, con fecha {datecompra_str}, se publicó en el Sistema de Información de Compras y Contratación Pública (www.mercadopublico.cl), la propuesta pública {id}, denominada {titulo}, según Bases administrativas y Técnicas, aprobadas por Decreto Alcaldicio N°{n_decreto} de fecha {fecha_decreto}"
+
+            primer_parrafo = f"La propuesta Pública con ID {idp} denominada \"{titulo}\" {modified_paragraph}  El Acto de Apertura de Ofertas, de fecha {fecha_apertura}; el Informe de Evaluación de la comisión evaluadora, de fecha {fecha_comision}; el Certificado de Factibilidad N° {cdp}, de fecha {datecdp_str}; el Acta de Proclamación de Alcalde y Concejales de la comuna de Maipú, de fecha 22 de junio de 2021, del Primer Tribunal Electoral Región Metropolitana, que proclamó como alcalde de la comuna de Maipú, al don TOMÁS VODANOVIC ESCUDERO; el Decreto Alcaldicio N°1656 DAP, de fecha 17 de junio del 2020, que designa como Secretario Municipal a don RICARDO HENRIQUEZ VALDÉS; la Ley N°19.886 de Bases sobre Contratos Administrativos de Suministro y Prestación de Servicios y su respectivo Reglamento, el cual fue aprobado mediante Decreto Supremo N° 250, del año 2004, del Ministerio de Hacienda y sus modificaciones; y las facultades conferidas en el articulo 63 del D.F.L.N°1, del año 2006, del Ministerio del Interior, que fijo el texto refundido, coordinado y sistematizado de la Ley N°18.695, Organica Constitucional de Municipalidades."
+
+
+            considerando_primer = f"1.- Que, con fecha {datecompra_str}, se publicó en el Sistema de Información de Compras y Contratación Pública (www.mercadopublico.cl), la propuesta pública {idp}, denominada {titulo}, según Bases administrativas y Técnicas, aprobadas por Decreto Alcaldicio N°{n_decreto} de fecha {fecha_decreto}"
             considerando_segundo = "2.- Que, en el llamado a licitación los siguientes proponentes presentaron ofertas:"
             considerando_tercer = ""
+            considerando_cuarto = ""
+            considerando_quinto = ""
+            considerando_sexto = ""
+            considerando_septimo = None
+
+            if session.get('process_ejected'):
+                return render_template('home/process.html', html=session.get('generated_document', ''), filename=filename, 
+                                       cdp=cdp, datecdp=datecdp, datecompra=datecompra, cuenta=cuenta, 
+                                       concejo=concejo, acuerdo=acuerdo, sesion=sesion, 
+                                       datesesion=datesesion, secretaria=secretaria, direccion=direccion, tipo_compra=tipo_compra,propuesta=propuesta, idp=idp, titulo=titulo)
+
             rechazados = get_rechazados(pdf_path)
             inadmisibles = get_inadmisibles(pdf_path)
             data_evaluacion = get_evaluacion(pdf_path)
@@ -233,7 +281,7 @@ def generate_word(filename):
                 linea = empresa.get("linea", None)
                 total = empresa.get("total", "")
                 plazo = empresa.get("plazo", "")
-                fragmento_empresas = f"{nombre_adjudicada} RUT {rut_adjudicada}, {linea}"
+                fragmento_empresas = f"{nombre_adjudicada} RUT {rut_adjudicada}, para la línea {linea}"
                 fragmento_adjudicadas.append(fragmento_empresas)
                 proponentes_adjudicados = "; ".join(fragmento_adjudicadas)
                 if linea is not None:
@@ -256,35 +304,48 @@ def generate_word(filename):
 
                 decreto_primero = f"1.- Declárense rechazadas las ofertas de los proponentes {proponentes_rechazados}, según los argumentos señalados en el considerando tercero."
                 if inadmisibles:
-                    decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto, decreto_sexto, decreto_septimo = add_inadmisibles_decreto(inadmisibles, id, titulo,nombre_adjudicada, rut_adjudicada, total, plazo, direccion)
+                    decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto, decreto_sexto, decreto_septimo = add_inadmisibles_decreto(inadmisibles, idp, titulo,nombre_adjudicada, rut_adjudicada, total, plazo, direccion, cuenta, tipo_compra, propuesta)
                 else:
-                    decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto = add_no_inadmisible_decreto(id, titulo, nombre_adjudicada, rut_adjudicada, total, plazo, direccion)
+                    decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto = add_no_inadmisible_decreto(idp, titulo, nombre_adjudicada, rut_adjudicada, total, plazo, direccion, cuenta, tipo_compra, propuesta)
             else:
                 considerando_tercer = "\n3.- Que, en el Acto de Apertura de las ofertas, de fecha {}, no existen ofertas rechazadas.".format(fecha_apertura)
                 lista_rechazados = ""
                 if inadmisibles:
                     proponentes_inadmisible = get_inadmisibles_text(inadmisibles)
-                    decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto, decreto_sexto = add_inadmisibles_no_rechazados(proponentes_inadmisible, id, titulo,nombre_adjudicada, rut_adjudicada, total, plazo, direccion)
+                    decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto, decreto_sexto = add_inadmisibles_no_rechazados(proponentes_inadmisible, idp, titulo,nombre_adjudicada, rut_adjudicada, total, plazo, direccion, cuenta, tipo_compra, propuesta)
 
             if not rechazados and not inadmisibles:
-                decreto_primero, decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto = add_noadm_norec(id, titulo, nombre_adjudicada, rut_adjudicada, total, plazo, direccion)
-
+                decreto_primero, decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto = add_noadm_norec(idp, titulo, nombre_adjudicada, rut_adjudicada, total, plazo, direccion, cuenta, tipo_compra, propuesta)
           
-            considerando_cuarto = f"\n4.-Que de acuerdo con el informe de Evaluación de Ofertas, de fecha {fecha_informe}, la comisión evaluadora propone lo siguiente:"
-            considerando_quinto = f"\n5.- Que, se cuenta con la disponibilidad presupuestaria para este fin, según da cuenta el Certificado de Factibilidad N° {cdp}, de fecha {datecdp_str}."
-            considerando_sexto = f"\n6.- Que, en el Numeral 13 de las Bases Administrativas, establece que la Unidad Técnica responsable de supervisar la ejecución de la ORDEN DE COMPRA / CONTRATO será la Dirección de {direccion} (SIGLA)"
-        
+            considerando_cuarto = f"\n4.-Que, de acuerdo con el informe de Evaluación de Ofertas, de fecha {fecha_informe}, la comisión evaluadora propone lo siguiente:"
+
+            if concejo == 'on':
+                considerando_quinto = f"\n5.-Que, la propuesta de adjudicación cuenta con el Acuerdo N° {acuerdo}, adoptado en Sesión Ordinaria N° {sesion} de fecha {datesesion_str}, según consta en Certificado N° {secretaria} de Secretaria Municipal, del Honorable Concejo Municipal."
+
+                considerando_sexto = f"\n6.- Que, se cuenta con la disponibilidad presupuestaria para este fin, según da cuenta el Certificado de Factibilidad N° {cdp}, de fecha {datecdp_str}."
+                considerando_septimo = f"\n7.- Que, en el Numeral 13 de las Bases Administrativas, establece que la Unidad Técnica responsable de supervisar la ejecución de {valor_propuesta.upper()} será la {direccion} (SIGLA)"
+
+            else:
+                considerando_quinto = f"\n5.- Que, se cuenta con la disponibilidad presupuestaria para este fin, según da cuenta el Certificado de Factibilidad N° {cdp}, de fecha {datecdp_str}."
+                considerando_sexto = f"\n6.- Que, en el Numeral 13 de las Bases Administrativas, establece que la Unidad Técnica responsable de supervisar la ejecución de {valor_propuesta.upper()} será la {direccion} (SIGLA)"
 
             table = extract_table_from_pdf(pdf_path)
             print("Table", table)
-
             output_file_path = pdf_path.replace(".pdf", "-PLANTILLA_DECRETO.docx")
             header = doc.sections[0].header
-        
             paragraph = header.paragraphs[0]
-        
             logo_run = paragraph.add_run()
-            logo_run.add_picture(image_path, width= Inches(6), height=Inches(0.5))
+            logo_run.add_picture(image_path, width= Inches(7), height=Inches(0.5))
+            fecha_decreto_alcaldicio = doc.add_paragraph()
+            fecha_decreto_alcaldicio_r = fecha_decreto_alcaldicio.add_run("Maipú, ")
+            fecha_decreto_alcaldicio_r.jc = 'left'
+            fecha_decreto_alcaldicio_r.font.size = Pt(10)
+            fecha_decreto_alcaldicio_r.bold = True
+            titulo_decreto = doc.add_paragraph()
+            titulo_decreto_r = titulo_decreto.add_run("DECRETO ALCALDICIO N° ")
+            titulo_decreto_r.jc = 'left'
+            titulo_decreto_r.font.size = Pt(10)
+            titulo_decreto_r.bold = True
             visto_p = doc.add_paragraph()
             visto_r = visto_p.add_run("VISTO:")
             visto_r.bold = True
@@ -302,12 +363,15 @@ def generate_word(filename):
             doc.add_paragraph(lista_empresa_adjudicada)
             doc.add_paragraph(considerando_quinto)
             doc.add_paragraph(considerando_sexto)
+            if considerando_septimo is not None:
+                doc.add_paragraph(considerando_septimo)
             decreto_p = doc.add_paragraph()
             decreto_r = decreto_p.add_run("DECRETO:")
 
             decreto_r.bold = True
             if posee_linea:
-                add_decretos_lineas(doc, id, titulo, rechazados, inadmisibles, empresas_adjudicadas, direccion)
+                print(titulo)
+                add_decretos_lineas(doc, idp, titulo, rechazados, inadmisibles, empresas_adjudicadas, direccion, cuenta, tipo_compra, propuesta)
             else:
                 doc.add_paragraph(decreto_primero)
                 doc.add_paragraph(decreto_segundo)
@@ -326,8 +390,17 @@ def generate_word(filename):
                 html = result.value
                 session['generated_document'] = html
                 session['process_ejected'] = True 
+
+
+            output_filename = filename.replace(".pdf", "-PLANTILLA_DECRETO.docx")
+
+            decreto_to_sharepoint(server_url, username, password, site_url, output_file_path, output_filename)
         
-            return render_template('home/process.html', html=html, filename=filename,cdp=cdp,datecdp=datecdp,datecompra=datecompra,direccion=direccion)
+            return render_template('home/process.html', html=html, filename=filename,
+                                   cdp=cdp,datecdp=datecdp, datecompra=datecompra, 
+                                   cuenta=cuenta, concejo=concejo, acuerdo=acuerdo, 
+                                   sesion=sesion, datesesion=datesesion, secretaria=secretaria, 
+                                   direccion=direccion, tipo_compra=tipo_compra, propuesta=propuesta, idp=idp, titulo=titulo)
         except Exception as e:
                 return f"Error inesperado {str(e)}"
 

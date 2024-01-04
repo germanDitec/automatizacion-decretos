@@ -1,6 +1,8 @@
 body {
-  height: 100vh;
+  background-color: #eee;
 }
+
+
 
 .file-drop-area {
   border: 2px dashed #ccc;
@@ -23,14 +25,21 @@ body {
 }
 
 .file-drop-area:hover {
+  background-color: #f5f5f5;
 }
 
 form {
   display: flex;
   flex-direction: column;
   margin-top: 60px;
-  width: 400px;
-  margin: 0 auto;
+  width: 800px;
+  margin: 40px auto;
+  padding: 50px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  border-top: 3px solid #10174a;
+
 }
 
 .input-group {
@@ -44,10 +53,74 @@ form {
   margin-bottom: 5px;
 }
 
+.input-group input, .input-group select {
+  height: 30px;
+  outline:none;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  padding: 5px;
+}
+
+.checkbox{
+  display: flex;
+  align-items: center;
+}
+
+.checkbox label {
+  margin-left: 5px;
+}
+
+.checkbox input{
+  margin-bottom: 10px;
+  width: 50px;
+  height: 30px;
+  transition: all 1s ease;
+}
+
+.checkbox input:checked{
+  transform: scale(1.2);
+}
+
+.input-group input:focus, .input-group select:focus {
+  border-color: #10174a;
+}
+
+.concejo{
+  display: none;
+}
+
+
+.input-group .radio{
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  margin-top: 10px;
+}
+
+.input-group .radio label {
+  margin-left: 5px;
+  color: #4f7ea1;     
+}
+
+
+.input-group .radio input {
+  margin-bottom: 8px;
+  color: #4f7ea1;     
+}
+
 form button {
   margin-top: 20px;
   border: none;
   padding: 10px;
   border-radius: 5px;
   cursor: pointer;
+  background-color: #10174a;
+  color: #fff;
+  transition: background-color 1s ease;
 }
+
+form button:hover {
+  background-color: #6b75a2;
+}
+
+

@@ -1,18 +1,20 @@
 import pdfplumber
 import re
 import PyPDF2
+from docx.shared import Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+
 
 def extract_table_from_pdf(pdf_file):
     table = None  
     
     with pdfplumber.open(pdf_file) as pdf:
-        for page_num in range(len(pdf.pages)):
+        for page_num in range(1, len(pdf.pages)):
             page = pdf.pages[page_num]
             table = page.extract_table()
             
             if table:
-                break  
+                break
             
     return table
 
@@ -37,7 +39,7 @@ def extract_num_decreto(pdf_file):
 
         for page in pdf_reader.pages:
             texto = page.extract_text()
-            coincidencias = re.findall(r'Nº(\d+)', texto)
+            coincidencias = re.findall(r'N°(\d+)', texto)
 
             if coincidencias:
                 numero = coincidencias[0]
@@ -62,19 +64,67 @@ def extract_id_decreto(pdf_file):
     return texto_despues_de_id
 
 
+# def extract_paragraphs_containing_keyword(pdf_file, keyword):
+#     paragraphs = []
+#     with open(pdf_file, "rb") as pdf_file:
+#         pdf_reader = PyPDF2.PdfReader(pdf_file)
+#         for page in pdf_reader.pages:
+#             text = page.extract_text()
+#             text = text.replace('\n', ' ')  
+#             while keyword in text:
+#                 start = text.index(keyword)
+#                 end = text.index('\n', start) if '\n' in text[start:] else None
+#                 paragraph = text[start:end].strip()
+#                 paragraphs.append(paragraph)
+#                 text = text[end:] if end else ""
+#     return paragraphs
+
+def extract_paragraphs_and_next_pages(pdf_file, keyword):
+    paragraphs_with_next_pages = []
+    with open(pdf_file, "rb") as pdf_file:
+        pdf_reader = PyPDF2.PdfReader(pdf_file)
+        for i, page in enumerate(pdf_reader.pages):
+            text = page.extract_text()
+            text = text.replace('\n', ' ')
+            if keyword in text:
+                start = text.index(keyword)
+                end = text.index('\n', start) if '\n' in text[start:] else None
+                paragraph = text[start:end].strip()
+                paragraphs_with_next_pages.append(paragraph)
+
+                # Asegurarse de no desbordar el índice al intentar acceder a las dos siguientes páginas
+                for j in range(1, 3):
+                    next_page_index = i + j
+                    if next_page_index < len(pdf_reader.pages):
+                        next_page_text = pdf_reader.pages[next_page_index].extract_text()
+                        next_page_text = next_page_text.replace('\n', ' ')
+                        paragraphs_with_next_pages.append(next_page_text)
+
+    return paragraphs_with_next_pages
+
 def extract_paragraphs_containing_keyword(pdf_file, keyword):
     paragraphs = []
     with open(pdf_file, "rb") as pdf_file:
         pdf_reader = PyPDF2.PdfReader(pdf_file)
-        for page in pdf_reader.pages:
+        total_pages = len(pdf_reader.pages)
+
+        for i, page in enumerate(pdf_reader.pages):
             text = page.extract_text()
-            text = text.replace('\n', ' ')  
+            text = text.replace('\n', ' ')
+
             while keyword in text:
                 start = text.index(keyword)
                 end = text.index('\n', start) if '\n' in text[start:] else None
                 paragraph = text[start:end].strip()
                 paragraphs.append(paragraph)
+
+                if i + 1 < total_pages:
+                    next_page_text = pdf_reader.pages[i + 1].extract_text()
+                    next_page_text = next_page_text.replace('\n', ' ')
+                    paragraphs[-1] += " " + next_page_text.split('\n', 1)[0].strip()
+
                 text = text[end:] if end else ""
+
     return paragraphs
 
 def replace_word_in_paragraph(paragraph, old_word, new_word):
@@ -157,3 +207,35 @@ def extract_last_page(pdf_file):
         last_page = pdf.pages[-1]
         text = last_page.extract_text()
         return text
+
+
+def obtener_direccion(direccion):
+    opciones = {
+        "0": "-- Seleccione Dirección --",
+        "1": "Dirección de Administración y Finanzas (DAF)",
+        "2": "Dirección de Asesoría Jurídica (DAJ)",
+        "3": "Dirección de Control",
+        "4": "Secretaría Comunal de Planificación (SECPLA)",
+        "5": "Dirección de Aseo, Ornato y Gestión Ambiental (DAOGA)",
+        "6": "Dirección de Tránsito y Transporte Público",
+        "7": "Dirección de Operaciones",
+        "8": "Dirección de Riesgos, Desastres y Emergencias (DRDE)",
+        "9": "Dirección de Inspección",
+        "10": "Dirección de Prevención y Seguridad Ciudadana (DIPRESEC)",
+        "11": "Dirección de Tecnología y Comunicaciones (DITEC)",
+        "12": "Dirección de Salud Municipal (DISAM)",
+        "13": "Dirección de Desarrollo Comunitario (DIDECO)",
+        "14": "Dirección de Obras Municipales (DOM)",
+        "15": "Servicio Municipal de Agua Potable y Alcantarillado (SMAPA)",
+    }
+    return opciones.get(direccion, "Opción no válida")
+
+def obtener_propuesta(propuesta):
+    opciones = {
+        "0": "-- Seleccione Propuesta --",
+        "1": "Orden de Compra",
+        "2": "Contrato",
+        "3": "Contrato y Orden de Compra",
+        "4": "Orden de Compra con Acuerdo Complementario",
+    }
+    return opciones.get(propuesta, "Opción no válida")

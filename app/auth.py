@@ -25,7 +25,10 @@ def register():
             error = "Todos los campos son obligatorios."
 
         elif password != repass:
-            error = "Las contraseñas no coiciden."
+            error = "Las contraseñas no coinciden."
+
+        elif not email.endswith('@maipu.cl'):
+            error = "No se admiten correos sin el dominio @maipu.cl"
 
         elif c.fetchone() is not None:
             error = "Usuario con correo {} ya se encuentra registrado.".format(email)
@@ -71,7 +74,7 @@ def login():
               
         if error is None:
             session.clear()
-            session['user_id'] = user['usuario_id']
+            session['user_id'] = user[0]
             return redirect(url_for('home.index'))    
 
         flash(error)

@@ -17,6 +17,19 @@
 </form>
 {% endblock content %}
 {% block js %}
-<script src="{{ url_for('static', filename='js/dragAndDrop.js') }}"></script>
- 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const listaLi = document.querySelectorAll('li');
+            console.log(listaLi);
+            if (listaLi.length === 0) {
+                const h2 = document.querySelector('#title');
+                if (h2) {
+                    h2.style.marginRight = '300px';
+                }
+            }
+
+        });
+
+    </script>
+
 {% endblock %}

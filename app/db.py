@@ -10,7 +10,6 @@ def get_db():
         username = "sa"
         password = "!desarroll0"
         connect_str = f'DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={host};DATABASE={database};UID={username};PWD={password};TrustServerCertificate=yes'
-        print("Conexión exitosa")
         g.db = pyodbc.connect(connect_str)
         return g.db
 
