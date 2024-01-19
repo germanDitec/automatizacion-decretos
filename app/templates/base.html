@@ -8,9 +8,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/transition-style">
     {% block css %}{% endblock css %}
 </head>
-<body>
+<body class="file-drop-area">
     <header>
         <nav>
            <a id="logo" href="{{ url_for('home.index') }}"><img src="{{ url_for('static', filename='img/logomaipu.png') }}" width="300px" /></a>
@@ -18,8 +19,11 @@
             <ul>
                 {% if g.user %}
                 <li><a href="{{ url_for('home.index') }}">Inicio</a></li>
-                <li><a href="{{ url_for('home.index') }}">Sobre el Proyecto</a></li>
+                <li><a href="{{ url_for('about.about') }}">Sobre el Proyecto</a></li>
                 <li><a href="{{ url_for('auth.logout') }}">Cerrar sesión</a></li>
+                {% else %}
+                <li><a href="{{ url_for('auth.login') }}">Iniciar sesión</a></li>
+                <li><a href="{{ url_for('auth.register') }}">Registrarse</a></li>
                 {% endif %}
             </ul>
         </nav>
@@ -27,9 +31,13 @@
 
 
     <section>
-        {% for message in get_flashed_messages() %}
-      <div class="flash" id="flash-message"><p>{{ message }}</p></div>
-      {% endfor %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="{{ category }}" transition-style="in:wipe:down">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
         {% block content %}        
         {% endblock %}
     </section>

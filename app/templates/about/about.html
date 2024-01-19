@@ -1,10 +1,43 @@
 {% extends "base.html" %}
 {% block title %}Sobre el Proyecto{% endblock %}
 {% block css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/about.css') }}">
 {% endblock %}
 {% block content %}
-<iframe src="https://docs.google.com/gview?url=https://immaipu.sharepoint.com/sites/Generadordedecretos/Documentos%20compartidos/Decretos%20generados/Informe_evaluacion_ID_2770-61-LQ23-PLANTILLA_DECRETO.docx" width="100%" height="500px" frameborder="0"></iframe>
 
+<div class="container">
+    <h1>Proyecto de Automatización de Decretos de Adjudicación</h1>
+
+    <h2>Introducción</h2>
+    <p>Bienvenid@ al proyecto de automatización de decretos de adjudicación, una iniciativa diseñada para ofrecer un apoyo a los profesionales de la Secretaría de Planificación Comunal (SECPLA). Este proyecto tiene como objetivo simplificar y agilizar el proceso de generación de Decretos de adjudicación, proporcionando una herramienta automatizada para facilitar gran parte del trabajo.</p>
+
+    <h2>Objetivo del Proyecto</h2>
+    <p>El objetivo principal de este proyecto es optimizar el tiempo y esfuerzo dedicado a la elaboración de decretos de adjudicación. Aunque la automatización no busca generar documentos finales sin intervención humana, pretende reducir la carga de trabajo al proporcionar un marco sólido y eficiente para la creación de estos documentos.</p>
+
+    <h2>Funcionalidades Clave</h2>
+    <ul>
+        <li><strong>Interfaz Amigable:</strong> Contamos con una interfaz fácil de usar que permite a los usuarios ingresar la información necesaria de manera rápida y sencilla.</li>
+        <li><strong>Generación Automática:</strong> La plataforma automatiza gran parte del proceso de redacción de decretos, creando un borrador inicial basado en la información proporcionada.</li>
+        <li><strong>Revisión y Corrección:</strong> Es fundamental destacar que la generación automática no pretende ser infalible. Los usuarios de SECPLA tendrán el deber de revisar y corregir cualquier error potencial antes de finalizar el documento.</li>
+    </ul>
+
+    <h2>Beneficios</h2>
+    <ul>
+        <li><strong>Ahorro de Tiempo:</strong> Reducción significativa del tiempo dedicado a la redacción manual de decretos de adjudicación.</li>
+        <li><strong>Minimización de Errores:</strong> Aunque la automatización facilita el proceso, la intervención humana garantiza la precisión y la calidad del documento final.</li>
+        <li><strong>Mayor Eficiencia:</strong> Los profesionales de SECPLA pueden centrarse en otros aspectos, dejando la parte rutinaria del proceso en manos del sistema automatizado.</li>
+    </ul>
+
+    <h2>Formato de Informes de Evaluación</h2>
+    <p>Es esencial que los informes de evaluación ingresados en el sistema sigan un formato específico. Asegúrese de que la información relevante, como número de Decreto alcaldicio, evaluación de propuestas, fechas, proponentes rechazados e inadmisibles, estén claramente presentados en los puntos acordados. El cumplimiento con este formato garantiza una generación de decretos coherente y precisa.</p>
+
+    <a class="button" href="{{ url_for('about.download_file') }}">Descargar Formato</a>
+
+
+
+    <h2>Próximos Pasos</h2>
+    <p>Estamos comprometidos a mejorar y adaptar el sistema según las necesidades específicas de SECPLA. Valoramos los comentarios y sugerencias de los usuarios para garantizar que esta herramienta sea lo más efectiva posible en el día a día.</p>
+    <p>¡Gracias por ser parte de esta iniciativa que busca simplificar y mejorar los procesos en la generación de Decretos de adjudicación!</p>
+</div>
 
 {% endblock %}

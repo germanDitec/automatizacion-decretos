@@ -6,17 +6,17 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
 
 def extract_table_from_pdf(pdf_file):
-    table = None  
-    
+    table = None
     with pdfplumber.open(pdf_file) as pdf:
         for page_num in range(1, len(pdf.pages)):
             page = pdf.pages[page_num]
             table = page.extract_table()
-            
+
             if table:
                 break
-            
+
     return table
+
 
 def extract_paragraph_after_keyword(pdf_file, keyword):
     paragraph = ""
@@ -26,7 +26,8 @@ def extract_paragraph_after_keyword(pdf_file, keyword):
             page_text = page.extract_text()
             match = re.search(keyword, page_text)
             if match:
-                paragraph_match = re.search(r'(?<=\n).*?(?=\n|$)', page_text[match.end():])
+                paragraph_match = re.search(
+                    r'(?<=\n).*?(?=\n|$)', page_text[match.end():])
                 if paragraph_match:
                     paragraph = paragraph_match.group(0)
                     break
@@ -70,7 +71,7 @@ def extract_id_decreto(pdf_file):
 #         pdf_reader = PyPDF2.PdfReader(pdf_file)
 #         for page in pdf_reader.pages:
 #             text = page.extract_text()
-#             text = text.replace('\n', ' ')  
+#             text = text.replace('\n', ' ')
 #             while keyword in text:
 #                 start = text.index(keyword)
 #                 end = text.index('\n', start) if '\n' in text[start:] else None
@@ -79,56 +80,42 @@ def extract_id_decreto(pdf_file):
 #                 text = text[end:] if end else ""
 #     return paragraphs
 
-def extract_paragraphs_and_next_pages(pdf_file, keyword):
-    paragraphs_with_next_pages = []
-    with open(pdf_file, "rb") as pdf_file:
-        pdf_reader = PyPDF2.PdfReader(pdf_file)
-        for i, page in enumerate(pdf_reader.pages):
-            text = page.extract_text()
-            text = text.replace('\n', ' ')
-            if keyword in text:
-                start = text.index(keyword)
-                end = text.index('\n', start) if '\n' in text[start:] else None
-                paragraph = text[start:end].strip()
-                paragraphs_with_next_pages.append(paragraph)
 
-                # Asegurarse de no desbordar el índice al intentar acceder a las dos siguientes páginas
-                for j in range(1, 3):
-                    next_page_index = i + j
-                    if next_page_index < len(pdf_reader.pages):
-                        next_page_text = pdf_reader.pages[next_page_index].extract_text()
-                        next_page_text = next_page_text.replace('\n', ' ')
-                        paragraphs_with_next_pages.append(next_page_text)
-
-    return paragraphs_with_next_pages
-
-def extract_paragraphs_containing_keyword(pdf_file, keyword):
+def extract_paragraphs_containing_keyword(pdf_file, keyword, case_sensitive=False):
     paragraphs = []
+    keyword_found = False
+
     with open(pdf_file, "rb") as pdf_file:
         pdf_reader = PyPDF2.PdfReader(pdf_file)
         total_pages = len(pdf_reader.pages)
 
-        for i, page in enumerate(pdf_reader.pages):
+        for i in range(total_pages):
+            page = pdf_reader.pages[i]
             text = page.extract_text()
             text = text.replace('\n', ' ')
 
-            while keyword in text:
+            if not case_sensitive:
+                keyword = keyword.lower()
+                text = text.lower()
+
+            if keyword in text:
+                keyword_found = True
                 start = text.index(keyword)
                 end = text.index('\n', start) if '\n' in text[start:] else None
                 paragraph = text[start:end].strip()
                 paragraphs.append(paragraph)
 
-                if i + 1 < total_pages:
-                    next_page_text = pdf_reader.pages[i + 1].extract_text()
-                    next_page_text = next_page_text.replace('\n', ' ')
-                    paragraphs[-1] += " " + next_page_text.split('\n', 1)[0].strip()
-
-                text = text[end:] if end else ""
+                if end is not None:
+                    text = text[end:]
+            elif keyword_found:
+                paragraphs[-1] += " " + text.strip()
 
     return paragraphs
 
+
 def replace_word_in_paragraph(paragraph, old_word, new_word):
     return paragraph.replace(old_word, new_word)
+
 
 def extract_line_below_propuesta_publica(pdf_file):
     line = ""
@@ -143,18 +130,22 @@ def extract_line_below_propuesta_publica(pdf_file):
                     break
     return line
 
+
 def add_indented_paragraph(doc, text, indentation, alignment=WD_PARAGRAPH_ALIGNMENT.LEFT):
     paragraph = doc.add_paragraph()
     paragraph.alignment = alignment
     run = paragraph.add_run(text)
-    run.font.size = Pt(12)  
+    run.font.size = Pt(12)
 
     style = paragraph.style
     style.paragraph_format.left_indent = Pt(indentation)
 
     return paragraph
 
+
 regex_fecha = r"\d{1,2}/\d{1,2}/\d{4}|\d{1,2} de [a-zA-Z]+ de \d{4}"
+
+
 def extract_date_from_keyword(pdf_file, keyword):
     with pdfplumber.open(pdf_file) as pdf:
         for page in pdf.pages:
@@ -162,10 +153,11 @@ def extract_date_from_keyword(pdf_file, keyword):
             paragraphs = text.split("\n")
             for paragraph_text in paragraphs:
                 if keyword in paragraph_text:
-                    matches = re.findall(regex_fecha, paragraph_text)
-                    if matches:
-                        return matches[0] 
-    return matches[0]
+                    date = re.findall(regex_fecha, paragraph_text)
+                    if date:
+                        return date[0]
+    return date[0]
+
 
 def extract_date_below_keyword(pdf_file, keyword):
     with pdfplumber.open(pdf_file) as pdf:
@@ -179,9 +171,9 @@ def extract_date_below_keyword(pdf_file, keyword):
                 if keyword in paragraph_text:
                     found_keyword = True
                 elif found_keyword:
-                    matches = re.findall(regex_fecha, paragraph_text)
-                    if matches:
-                        return matches[0]
+                    fecha_comision = re.findall(regex_fecha, paragraph_text)
+                    if fecha_comision:
+                        return fecha_comision[0]
 
 
 def extract_date_from_last_page(pdf_file):
@@ -201,6 +193,7 @@ def extract_date_from_last_page(pdf_file):
                 return matches[0]
 
     return None
+
 
 def extract_last_page(pdf_file):
     with pdfplumber.open(pdf_file) as pdf:
@@ -229,6 +222,7 @@ def obtener_direccion(direccion):
         "15": "Servicio Municipal de Agua Potable y Alcantarillado (SMAPA)",
     }
     return opciones.get(direccion, "Opción no válida")
+
 
 def obtener_propuesta(propuesta):
     opciones = {

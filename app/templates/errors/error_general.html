@@ -1,0 +1,26 @@
+
+{% extends 'base.html' %}
+{% block title %}Error{% endblock %}
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/error.css') }}">
+{% endblock %}
+{% block content %}
+
+
+<div class="error">
+
+<div class="banner">
+  <img src="{{ url_for('static', filename='img/banner-error.png') }}" width="400px" height="400px" />
+</div>
+
+<h1>¡Error al realizar la solicitud!</h1>
+
+<p>Ha ocurrido un error al generar el Decreto de adjudicación. Por favor, verifique que el documento cumpla con el formato requerido.</p>
+<p>Error: {{ error }}</p>
+
+<a class="button" href="{{ url_for('home.index') }}">Volver a intentar</a>
+
+</div>
+
+
+{% endblock %}

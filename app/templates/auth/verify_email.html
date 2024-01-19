@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block title %}Verificación de correo{% endblock %}
+{% block css %} {% endblock %}
+{% block content %}
+
+    <h1>Verificación de Cuenta</h1>
+    {% if success %}
+        <p>Tu cuenta ha sido verificada. Ahora puedes iniciar sesión.</p>
+    {% else %}
+        <p>Enlace de verificación inválido.</p>
+    {% endif %}
+
+
+{% endblock %}
+
+{% block js %}
+{% endblock %}
+

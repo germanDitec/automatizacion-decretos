@@ -1,10 +1,12 @@
 document.addEventListener('DOMContentLoaded', function () {
     const fileInput = document.querySelector('#file');
     const fileDropArea = document.querySelector('.file-drop-area');
+    const dropArea = document.querySelector(".drop-area")
 
     fileDropArea.addEventListener('dragover', function (e) {
         e.preventDefault();
         fileDropArea.style.backgroundColor = '#f0f0f0';
+        dropArea.style.backgroundColor = '#f0f0f0';
     });
 
     fileDropArea.addEventListener('dragleave', function () {

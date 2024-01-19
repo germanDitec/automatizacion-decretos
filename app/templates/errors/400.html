@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Error 400{% endblock %}
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/error.css') }}">
+{% endblock %}
+{% block content %}
+
+
+<div class="error">
+
+<div class="banner">
+  <img src="{{ url_for('static', filename='img/banner-error.png') }}" width="400px" height="400px" />
+</div>
+
+<h1>¡Error al realizar la solicitud!</h1>
+
+<p>Ha habido un error al generar el decreto, verifique que el documento cumpla con el formato requerido. Por otro lado, también es probable que se haya excedido el credito de la cuenta de openAI.</p>
+
+<a class="button" href="{{ url_for('home.index') }}">Volver a intentar</a>
+
+</div>
+
+
+{% endblock %}
+

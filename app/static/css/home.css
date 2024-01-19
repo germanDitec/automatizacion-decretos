@@ -4,7 +4,7 @@ body {
 
 
 
-.file-drop-area {
+.drop-area {
   border: 2px dashed #ccc;
   border-radius: 8px;
   padding: 20px;
@@ -24,7 +24,7 @@ body {
   display: none;
 }
 
-.file-drop-area:hover {
+.drop-area:hover {
   background-color: #f5f5f5;
 }
 
@@ -53,15 +53,16 @@ form {
   margin-bottom: 5px;
 }
 
-.input-group input, .input-group select {
+.input-group input,
+.input-group select {
   height: 30px;
-  outline:none;
+  outline: none;
   border: 1px solid #ccc;
   border-radius: 10px;
   padding: 5px;
 }
 
-.checkbox{
+.checkbox {
   display: flex;
   align-items: center;
 }
@@ -70,27 +71,28 @@ form {
   margin-left: 5px;
 }
 
-.checkbox input{
+.checkbox input {
   margin-bottom: 10px;
   width: 50px;
   height: 30px;
   transition: all 1s ease;
 }
 
-.checkbox input:checked{
+.checkbox input:checked {
   transform: scale(1.2);
 }
 
-.input-group input:focus, .input-group select:focus {
+.input-group input:focus,
+.input-group select:focus {
   border-color: #10174a;
 }
 
-.concejo{
+.concejo {
   display: none;
 }
 
 
-.input-group .radio{
+.input-group .radio {
   display: flex;
   align-items: center;
   margin-bottom: 10px;
@@ -99,13 +101,13 @@ form {
 
 .input-group .radio label {
   margin-left: 5px;
-  color: #4f7ea1;     
+  color: #4f7ea1;
 }
 
 
 .input-group .radio input {
   margin-bottom: 8px;
-  color: #4f7ea1;     
+  color: #4f7ea1;
 }
 
 form button {
@@ -123,4 +125,93 @@ form button:hover {
   background-color: #6b75a2;
 }
 
+.loader {
+  --cell-size: 52px;
+  --cell-spacing: 1px;
+  --cells: 3;
+  --total-size: calc(var(--cells) * (var(--cell-size) + 2 * var(--cell-spacing)));
+  display: flex;
+  flex-wrap: wrap;
+  width: var(--total-size);
+  height: var(--total-size);
+}
 
+.cell {
+  flex: 0 0 var(--cell-size);
+  margin: var(--cell-spacing);
+  background-color: transparent;
+  box-sizing: border-box;
+  border-radius: 4px;
+  animation: 1.5s ripple ease infinite;
+}
+
+.cell.d-1 {
+  animation-delay: 100ms;
+}
+
+.cell.d-2 {
+  animation-delay: 200ms;
+}
+
+.cell.d-3 {
+  animation-delay: 300ms;
+}
+
+.cell.d-4 {
+  animation-delay: 400ms;
+}
+
+.cell:nth-child(1) {
+  --cell-color: #00FF87;
+}
+
+.cell:nth-child(2) {
+  --cell-color: #0CFD95;
+}
+
+.cell:nth-child(3) {
+  --cell-color: #17FBA2;
+}
+
+.cell:nth-child(4) {
+  --cell-color: #23F9B2;
+}
+
+.cell:nth-child(5) {
+  --cell-color: #30F7C3;
+}
+
+.cell:nth-child(6) {
+  --cell-color: #3DF5D4;
+}
+
+.cell:nth-child(7) {
+  --cell-color: #45F4DE;
+}
+
+.cell:nth-child(8) {
+  --cell-color: #53F1F0;
+}
+
+.cell:nth-child(9) {
+  --cell-color: #60EFFF;
+}
+
+/*Animation*/
+@keyframes ripple {
+  0% {
+    background-color: transparent;
+  }
+
+  30% {
+    background-color: var(--cell-color);
+  }
+
+  60% {
+    background-color: transparent;
+  }
+
+  100% {
+    background-color: transparent;
+  }
+}
