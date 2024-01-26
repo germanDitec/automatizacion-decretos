@@ -111,8 +111,7 @@ def index():
                 """, (idp, propuesta, direccion, titulo, cdp, datecdp, datecompra, cuenta, concejo, acuerdo, sesion, datesesion, secretaria, tipo_compra, g.user[0])
             )
 
-            g.informe_id = c.fetchone()[0]
-            print("Informe ID: ", g.informe_id)
+            session['informe_id'] = c.fetchone()[0]
 
             db.commit()
 
@@ -491,12 +490,14 @@ def generate_word(filename):
             doc.save(output_file_path)
 
             db, c = get_db()
-            print("INFORME ID", g.informe_id)
+            print("INFORME ID en session", int(session['informe_id']))
 
             c.execute(
-                """INSERT INTO decreto(informe_id, costo_total, propuesta_id, direccion_id, created_by) """,
-                (g.informe_id, total_price, propuesta,
-                 direccion, session['user_id'])
+                """
+                INSERT INTO decreto(informe_id, costo_total, propuesta_id, direccion_id, created_by)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                (int(session['informe_id']), total_price, propuesta, direccion, session['user_id'])
             )
 
             db.commit()
