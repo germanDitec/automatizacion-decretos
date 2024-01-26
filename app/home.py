@@ -10,13 +10,14 @@ import os
 import json
 import mammoth
 from app.auth import login_required
+from app.db import get_db
 
 from app.data_handling.data_extracting import (extract_table_from_pdf, extract_paragraph_after_keyword, extract_num_decreto, extract_id_decreto,
                                                extract_paragraphs_containing_keyword, replace_word_in_paragraph, extract_line_below_propuesta_publica, add_indented_paragraph, extract_date_from_keyword,
-                                               extract_date_below_keyword, extract_date_from_last_page, extract_last_page, obtener_direccion, obtener_propuesta)
+                                               extract_date_below_keyword, extract_date_from_last_page, extract_last_page, obtener_direccion, obtener_propuesta, extract_page_containing_keyword)
 
-from app.data_handling.data_managing import (get_rechazados_text, get_inadmisibles_text, add_inadmisibles_decreto, add_no_inadmisible_decreto,
-                                             add_inadmisibles_no_rechazados, add_noadm_norec, add_decretos_lineas, add_decretos, formate_date_text, informe_to_sharepoint, decreto_to_sharepoint)
+from app.data_handling.data_managing import (get_rechazados_text, get_inadmisibles_text, add_decretos_lineas,
+                                             add_decretos, formate_date_text, informe_to_sharepoint, decreto_to_sharepoint, add_visto)
 
 from app.data_handling.data_writing import generate_word_document, add_table_to_word_document
 
@@ -73,6 +74,9 @@ def index():
             sesion = None
             datesesion = None
             secretaria = None
+            concejo = False
+        else:
+            concejo = True
 
         error = None
 
@@ -95,10 +99,26 @@ def index():
             file_path = os.path.join(upload_folder, filename)
             pdf_file.save(file_path)
             informe_to_sharepoint(server_url, username,
-                                  password, site_url, file_path, filename)
+                                  password, site_url, file_path, filename, valor_direccion)
+            db, c = get_db()
+            c.execute(
+                """
+                INSERT INTO informe(idp, propuesta_id, direccion_id, titulo, cdp, fecha_cdp, 
+                fecha_compra, cuenta, concejo, acuerdo_concejo, numero_sesion, fecha_sesion, 
+                secretaria, tipo_compra, created_by) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING informe_id
+                """, (idp, propuesta, direccion, titulo, cdp, datecdp, datecompra, cuenta, concejo, acuerdo, sesion, datesesion, secretaria, tipo_compra, g.user[0])
+            )
+
+            g.informe_id = c.fetchone()[0]
+            print("Informe ID: ", g.informe_id)
+
+            db.commit()
+
             session['process_ejected'] = False
             return redirect(url_for('home.generate_word', filename=filename, idp=idp, cdp=cdp, datecdp=datecdp, datecompra=datecompra,
-                                    direccion=valor_direccion, concejo=concejo, acuerdo=acuerdo, sesion=sesion, datesesion=datesesion,
+                                    direccion=direccion, concejo=concejo, acuerdo=acuerdo, sesion=sesion, datesesion=datesesion,
                                     secretaria=secretaria, cuenta=cuenta, propuesta=propuesta, tipo_compra=tipo_compra, titulo=titulo))
         else:
             error = "El documento debe tener un formato PDF"
@@ -109,16 +129,16 @@ def index():
 
 def get_rechazados(pdf_path):
     try:
-        input_promt = """Verifica si hay proponentes que fuéron rechazados, y si es así retornalos en formato JSON y hazlo con la siguiente estructura: 
+        input_promt = """Verifica si hay proponentes que fuéron rechazados, y si es así retornalos en formato JSON y hazlo con la siguiente estructura:
             rechazados: [
-            nombre: nombre empresa, 
-            RUT: rut empresa, 
+            nombre: nombre empresa,
+            RUT: rut empresa,
             motivo: motivo de rechazo ]
             Y el caso de que no haya ningún proponente rechazado, retorna este json vacio:
-                rechazados:[] 
+                rechazados:[]
             Solo quiero el JSON, no incluyas texto adicional, haz esto en base a este texto. {}"""
 
-        paragraphs_propmt = input_promt.format(extract_paragraphs_containing_keyword(
+        paragraphs_propmt = input_promt.format(extract_page_containing_keyword(
             pdf_path, "OBSERVACIONES DEL ACTO DE APERTURA"))
         rechazados_prompt = client.chat.completions.create(
             model="gpt-4-1106-preview",
@@ -129,25 +149,28 @@ def get_rechazados(pdf_path):
             ]
         )
         data = rechazados_prompt.choices[0].message.content
+        prompt_tokens = rechazados_prompt.usage.total_tokens
+        completion_tokens = rechazados_prompt.usage.completion_tokens
         datos = json.loads(data)
         rechazados = datos.get("rechazados", [])
         print("rechazados:", rechazados)
-        return rechazados
+        return rechazados, prompt_tokens, completion_tokens
 
     except:
-        return []
+        return [], 0, 0
 
 
 def get_inadmisibles(pdf_path):
     try:
-        input_promt = """Verifica si en el parrafo de 'ADMISIBILIDAD' hay algún proponente que es inadmisible, y si es así retornalos en formato JSON y hazlo con la siguiente estructura: 
+        input_promt = """Verifica si en el parrafo de 'ADMISIBILIDAD' hay algún proponente que es inadmisible, y si es así retornalos en formato JSON y hazlo con la siguiente estructura:
             inadmisibles: [
-            nombre: nombre empresa, 
-            RUT: rut empresa
-            ]
+            nombre: nombre empresa,
+            RUT: rut empresa,
+            linea: lineas
+            ], en el caso de que no tenga lineas, retornar solo el nombre y RUT.
 
-            Y el caso de que no haya ningún proponente rechazado, retorna este json vacio:
-                inadmisibles:[] 
+            Y en el caso de que no haya ningún proponente inadmisible, retorna este json vacio:
+                inadmisibles:[]
             Solo quiero el JSON, no incluyas texto adicional, haz esto en base a este texto y los parrafos que no comiencen con '•' ignoralos. {}"""
 
         paragraphs_propmt = input_promt.format(extract_paragraphs_containing_keyword(
@@ -161,49 +184,54 @@ def get_inadmisibles(pdf_path):
             ]
         )
         data = rechazados_prompt.choices[0].message.content
+        prompt_tokens = rechazados_prompt.usage.prompt_tokens
+        completion_tokens = rechazados_prompt.usage.completion_tokens
         datos = json.loads(data)
         inadmisibles = datos.get("inadmisibles", [])
         print("inadmisibles:", inadmisibles)
-        return inadmisibles
+        return inadmisibles, prompt_tokens, completion_tokens
 
     except:
-        return []
+        return [], 0, 0
 
 
 def get_evaluacion(pdf_path):
     try:
-        evaluacion_input = "Quiero que hagas un resumen de los proponentes desde el parrafo de 'ADMISIBILIDAD',  redacta el resumen sin especificar que es lo que te pedí ni tampoco mencionando el parrafo 8.1. También quiero que me listes con viñetas el resumen, recuerda retornar en texto sin formato, haz esto en base a este texto: {}"
+        evaluacion_input = "Quiero que hagas un resumen de la evaluación del o los proponentes desde el parrafo de 'ADMISIBILIDAD' hasta antes del párrafo de 'CONCLUSIÓN', redacta el resumen sin especificar que es lo que te pedí. También quiero que me listes con viñetas el resumen y si hay proponentes que fueron declarados inadmisibles detallalos, recuerda retornar en texto sin formato, haz esto en base a esta información: {}"
         evaluacion_page = evaluacion_input.format(
             extract_paragraphs_containing_keyword(pdf_path, "ADMISIBILIDAD"))
 
         evaluacion_prompt = client.chat.completions.create(
             model="gpt-4-1106-preview",
             messages=[
-                {"role": "system", "content": "Quiero que analices el texto que solicito y me retornes lo que te pido, el contexto del texto es sobre una comisión evaluadora que ha realizado un informe. Esto ya pasó entonces escribe en tiempo pasado, no quiero que agregues porcentajes y utiliza un lenguaje muy formal"},
+                {"role": "system", "content": "Quiero que me ayudes analizando el texto que te proporciono y me retornes lo que te pido, el contexto del texto es sobre una comisión evaluadora que ha realizado un informe sobre los proponentes para adjudicar y quiero que hagas un resumen de la evaluación. Esto ya pasó entonces escribe en tiempo pasado, no quiero que agregues porcentajes y utiliza un lenguaje muy formal, además no quiero que incluyas lo que concluyó la comisión para adjudicar"},
                 {"role": "user", "content": evaluacion_page}
             ]
         )
 
         data_evaluacion = evaluacion_prompt.choices[0].message.content
+        prompt_tokens = evaluacion_prompt.usage.prompt_tokens
+        completion_tokens = evaluacion_prompt.usage.completion_tokens
         print("PROMPT EVALUACIÓN: ", evaluacion_page)
-        return data_evaluacion
+        print("TOTAL TOKENS: ", prompt_tokens + completion_tokens)
+        return data_evaluacion, prompt_tokens, completion_tokens
 
     except Exception as e:
-        return f"No se pudo realizar la evaluación: {e}"
+        return f"No se pudo realizar la evaluación: {e}", 0, 0
 
 
 def get_datos_adjudicacion(pdf_path):
     try:
-        adjudicacion = """Quiero que me retornes nombre, RUT y monto total de la o las empresas que hayan sido nombradas. Esto en formato JSON, extrae la información desde el párrafo de 'PROPOSICIÓN DE ADJUDICACIÓN'. Retorna solo el JSON con la siguiente estructura. 
+        adjudicacion = """Quiero que me retornes nombre, RUT y monto total de la o las empresas que hayan sido nombradas. Esto en formato JSON, extrae la información desde el párrafo de 'PROPOSICIÓN DE ADJUDICACIÓN'. Retorna solo el JSON con la siguiente estructura.
         En el caso de que existan más lineas en el parrafo de 'PROPOSICIÓN DE ADJUDICACION', retorna con el siguiente formato:
             empresas: [
-            nombre: nombre empresa, 
+            nombre: nombre empresa,
             RUT: rut empresa,
             linea: linea,
             total: total,
             plazo: plazo
             ]
-            Y en el caso de que exista solamente una empresa retorna con el siguiente formato: 
+            Y en el caso de que exista solamente una empresa retorna con el siguiente formato:
             empresas: [
             nombre: nombre empresa,
             RUT: rut empresa,
@@ -224,13 +252,16 @@ def get_datos_adjudicacion(pdf_path):
         )
 
         data_adjudicacion = adjudicacion_prompt.choices[0].message.content
+        prompt_tokens = adjudicacion_prompt.usage.prompt_tokens
+        completion_tokens = adjudicacion_prompt.usage.completion_tokens
         data = json.loads(data_adjudicacion)
         empresas = data.get("empresas", [])
         print("empresas: ", empresas)
-        return empresas
+        print("TOTAL TOKENS: ", prompt_tokens + completion_tokens)
+        return empresas, prompt_tokens, completion_tokens
 
     except Exception as e:
-        return []
+        return [], 0, 0
 
 
 def get_desiertas(pdf_path):
@@ -238,36 +269,39 @@ def get_desiertas(pdf_path):
         input_promt = """{}
         Analiza el texto y retorna un JSON que contiene las líneas desiertas, representadas por el formato: {"desiertas": []}, donde se listarán los números de línea que no tienen ofertas o adjudicaciones.
         Y el caso de que no haya ninguna linea desierta, retorna este json vacio:
-                linea:[
-                    numero: numero linea,
-                    razón: razon de porque está desierta
+            desiertas:[
+                    numero: numero linea o números de linea,
+                    motivo: la razon de porque está desierta
                 ]
-        Solo quiero el JSON, no incluyas texto adicional, haz esto en base al texto que te estoy proporcionando toma en cuenta solamente el parrafo de 'PROPOSICIÓN DE ADJUDICACIÓN'"""
+        Solo quiero el JSON, no incluyas texto adicional, haz esto en base al texto que te estoy proporcionando"""
 
-        paragraphs_propmt = input_promt.format(extract_last_page(pdf_path))
+        desiertas_prompt = input_promt.format(
+            extract_page_containing_keyword(pdf_path, "CONCLUSIÓN"))
 
-        rechazados_prompt = client.chat.completions.create(
+        desiertas = client.chat.completions.create(
             model="gpt-4-1106-preview",
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": "Quiero que analices la información que te estoy pasando y quiero que me retornes la información en formato JSON."},
-                {"role": "user", "content": paragraphs_propmt}
+                {"role": "user", "content": desiertas_prompt}
             ]
         )
-        print(paragraphs_propmt)
-        data = rechazados_prompt.choices[0].message.content
+        print("desiertas_prompt:", desiertas_prompt)
+        data = desiertas.choices[0].message.content
+        prompt_tokens = desiertas.usage.prompt_tokens
+        completion_tokens = desiertas.usage.completion_tokens
         datos = json.loads(data)
         desiertas = datos.get("desiertas", [])
         print("=========================================")
         print("desiertas:", desiertas)
+        print("TOTAL TOKENS: ", prompt_tokens + completion_tokens)
         print("=========================================\n")
-        return desiertas
+        return desiertas, prompt_tokens, completion_tokens
 
     except:
-        return []
+        return [], 0, 0
 
 
-# CONCURRENCY FUNCTIONS
 functions_list = [get_rechazados, get_inadmisibles,
                   get_evaluacion, get_datos_adjudicacion, get_desiertas]
 
@@ -291,12 +325,15 @@ def generate_word(filename):
             datesesion = request.args.get('datesesion')
             if datesesion is not None:
                 datesesion_str = formate_date_text(datesesion)
+            else:
+                datesesion_str = None
             secretaria = request.args.get('secretaria')
             datecdp = request.args.get('datecdp')
             datecompra = request.args.get('datecompra')
             datecdp_str = formate_date_text(datecdp)
             datecompra_str = formate_date_text(datecompra)
             direccion = request.args.get('direccion')
+            valor_direccion = obtener_direccion(direccion)
             n_decreto = extract_num_decreto(pdf_path)
             idp = request.args.get('idp')
             titulo = request.args.get('titulo')
@@ -309,11 +346,6 @@ def generate_word(filename):
             fecha_informe = extract_date_from_last_page(pdf_path)
             fecha_decreto = extract_date_from_keyword(
                 pdf_path, "Decreto Alcaldicio")
-            fecha_comision = extract_date_below_keyword(
-                pdf_path, "CONSTITUCIÓN Y SESIONES DE LA COMISIÓN EVALUADORA")
-            modified_paragraph = f"el Decreto Alcaldicio N° {n_decreto} de fecha {fecha_decreto}, que aprueba las Bases Administrativas, Bases Técnicas, Anexos y demás antecedentes de la licitación;"
-
-            primer_parrafo = f"La propuesta Pública con ID {idp} denominada \"{titulo}\" {modified_paragraph}  El Acto de Apertura de Ofertas, de fecha {fecha_apertura}; el Informe de Evaluación de la comisión evaluadora, de fecha {fecha_comision}; el Certificado de Factibilidad N° {cdp}, de fecha {datecdp_str}; el Acta de Proclamación de Alcalde y Concejales de la comuna de Maipú, de fecha 22 de junio de 2021, del Primer Tribunal Electoral Región Metropolitana, que proclamó como alcalde de la comuna de Maipú, al don TOMÁS VODANOVIC ESCUDERO; el Decreto Alcaldicio N°1656 DAP, de fecha 17 de junio del 2020, que designa como Secretario Municipal a don RICARDO HENRIQUEZ VALDÉS; la Ley N°19.886 de Bases sobre Contratos Administrativos de Suministro y Prestación de Servicios y su respectivo Reglamento, el cual fue aprobado mediante Decreto Supremo N° 250, del año 2004, del Ministerio de Hacienda y sus modificaciones; y las facultades conferidas en el articulo 63 del D.F.L.N°1, del año 2006, del Ministerio del Interior, que fijo el texto refundido, coordinado y sistematizado de la Ley N°18.695, Organica Constitucional de Municipalidades."
 
             considerando_primer = f"1.- Que, con fecha {datecompra_str}, se publicó en el Sistema de Información de Compras y Contratación Pública (www.mercadopublico.cl), la propuesta pública {idp}, denominada {titulo}, según Bases administrativas y Técnicas, aprobadas por Decreto Alcaldicio N°{n_decreto} de fecha {fecha_decreto}"
             considerando_segundo = "2.- Que, en el llamado a licitación los siguientes proponentes presentaron ofertas:"
@@ -335,12 +367,35 @@ def generate_word(filename):
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 results = list(executor.map(
                     lambda func: func(pdf_path), functions_list))
+            print("RESULTS:", results)
+            rechazados, prompt_rechazados, completion_rechazados = results[0]
+            inadmisibles, prompt_inadmisibles, completion_inadmisibles = results[1]
+            data_evaluacion, prompt_evaluacion, completion_evaluacion = results[2]
+            empresas_adjudicadas, prompt_adjudicacion, completion_adjudicacion = results[3]
+            desiertas, prompt_desiertas, completion_desiertas = results[4]
+            print("Rechazadas :", rechazados, " Prompt :",
+                  prompt_rechazados, " Completion :", completion_rechazados)
+            print("Inadmisibles :", inadmisibles, " Prompt :",
+                  prompt_inadmisibles, " Completion :", completion_inadmisibles)
+            print("Evaluacion :", data_evaluacion, " Prompt :",
+                  prompt_evaluacion, " Completion :", completion_evaluacion)
+            print("Adjudicadas :", empresas_adjudicadas, " Prompt :",
+                  prompt_adjudicacion, " Completion :", completion_adjudicacion)
+            print("Desiertas :", desiertas, " Prompt :",
+                  prompt_desiertas, " Completion :", completion_desiertas)
+            total_prompt_tokens = prompt_rechazados + prompt_inadmisibles + \
+                prompt_evaluacion + prompt_adjudicacion + prompt_desiertas
+            total_completion_tokens = completion_rechazados + completion_inadmisibles + \
+                completion_evaluacion + completion_adjudicacion + completion_desiertas
+            total_tokens = total_prompt_tokens + total_completion_tokens
 
-            rechazados = results[0]
-            inadmisibles = results[1]
-            data_evaluacion = results[2]
-            empresas_adjudicadas = results[3]
-            desiertas = results[4]
+            print("TOTAL PROMPT TOKENS: ", total_prompt_tokens)
+            print("TOTAL COMPLETION TOKENS: ", total_completion_tokens)
+            print("TOTAL TOTAL TOKENS: ", total_tokens)
+
+            price_prompt = total_prompt_tokens * 0.001
+            price_completion = total_completion_tokens * 0.003
+            total_price = round(price_prompt + price_completion, 2)
 
             fragmento_adjudicadas = []
             posee_linea = False
@@ -369,16 +424,16 @@ def generate_word(filename):
                     fecha_apertura)
                 lista_rechazados = ""
 
-            considerando_cuarto = f"\n4.-Que, de acuerdo con el informe de Evaluación de Ofertas, de fecha {fecha_informe}, la comisión evaluadora propone lo siguiente:"
+            considerando_cuarto = f"\n4.- Que, de acuerdo con el informe de Evaluación de Ofertas, de fecha {fecha_informe}, la comisión evaluadora estableció lo siguiente:"
 
-            if concejo == 'on':
-                considerando_quinto = f"\n5.-Que, la propuesta de adjudicación cuenta con el Acuerdo N° {acuerdo}, adoptado en Sesión Ordinaria N° {sesion} de fecha {datesesion_str}, según consta en Certificado N° {secretaria} de Secretaria Municipal, del Honorable Concejo Municipal."
+            if concejo:
+                considerando_quinto = f"\n5.- Que, la propuesta de adjudicación cuenta con el Acuerdo N° {acuerdo}, adoptado en Sesión Ordinaria N° {sesion} de fecha {datesesion_str}, según consta en Certificado N° {secretaria} de Secretaria Municipal, del Honorable Concejo Municipal."
                 considerando_sexto = f"\n6.- Que, se cuenta con la disponibilidad presupuestaria para este fin, según da cuenta el Certificado de Factibilidad N° {cdp}, de fecha {datecdp_str}."
-                considerando_septimo = f"\n7.- Que, en el Numeral 13 de las Bases Administrativas, establece que la Unidad Técnica responsable de supervisar la ejecución de {valor_propuesta.upper()} será la {direccion}."
+                considerando_septimo = f"\n7.- Que, en el Numeral 13 de las Bases Administrativas, establece que la Unidad Técnica responsable de supervisar la ejecución de {valor_propuesta.upper()} será la {valor_direccion}."
 
             else:
                 considerando_quinto = f"\n5.- Que, se cuenta con la disponibilidad presupuestaria para este fin, según da cuenta el Certificado de Factibilidad N° {cdp}, de fecha {datecdp_str}."
-                considerando_sexto = f"\n6.- Que, en el Numeral 13 de las Bases Administrativas, establece que la Unidad Técnica responsable de supervisar la ejecución de {valor_propuesta.upper()} será la {direccion}."
+                considerando_sexto = f"\n6.- Que, en el Numeral 13 de las Bases Administrativas, establece que la Unidad Técnica responsable de supervisar la ejecución de {valor_propuesta.upper()} será la {valor_direccion}."
 
             table = extract_table_from_pdf(pdf_path)
             print("Table", table)
@@ -404,7 +459,8 @@ def generate_word(filename):
             visto_p = doc.add_paragraph()
             visto_r = visto_p.add_run("VISTO:")
             visto_r.bold = True
-            doc.add_paragraph(primer_parrafo)
+            add_visto(doc, n_decreto, fecha_decreto, acuerdo, sesion, datesesion, secretaria,
+                      idp, titulo, fecha_apertura, fecha_informe, cdp, datecdp_str, concejo)
             considerando_p = doc.add_paragraph()
             considerando_r = considerando_p.add_run("CONSIDERANDO:")
             considerando_r.bold = True
@@ -434,6 +490,17 @@ def generate_word(filename):
 
             doc.save(output_file_path)
 
+            db, c = get_db()
+            print("INFORME ID", g.informe_id)
+
+            c.execute(
+                """INSERT INTO decreto(informe_id, costo_total, propuesta_id, direccion_id, created_by) """,
+                (g.informe_id, total_price, propuesta,
+                 direccion, session['user_id'])
+            )
+
+            db.commit()
+
             with open(output_file_path, "rb") as docx_file:
                 result = mammoth.convert_to_html(docx_file)
                 html = result.value
@@ -444,7 +511,7 @@ def generate_word(filename):
                 ".pdf", "-PLANTILLA_DECRETO.docx")
 
             decreto_to_sharepoint(
-                server_url, username, password, site_url, output_file_path, output_filename)
+                server_url, username, password, site_url, output_file_path, output_filename, valor_direccion)
 
             return render_template('home/process.html', html=html, filename=filename,
                                    cdp=cdp, datecdp=datecdp, datecompra=datecompra,
@@ -459,12 +526,12 @@ def generate_word(filename):
             return render_template('errors/error_general.html', error=str(e)), 500
 
 
-@bp.route("/download/<filename>")
+@ bp.route("/download/<filename>")
 def download_file(filename):
     output_file_path = filename.replace(".pdf", "-PLANTILLA_DECRETO.docx")
     return send_from_directory('static/documents_folder', output_file_path, as_attachment=True)
 
 
-@bp.errorhandler(400)
+@ bp.errorhandler(400)
 def bad_request(e):
     return render_template('errors/400.html'), 400

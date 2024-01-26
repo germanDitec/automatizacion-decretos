@@ -2,3 +2,5 @@ venv/
 __pycache__/
 requerimientos-evaluacion.txt
 documents_folder/
+flask_session/
+schema_sql_server

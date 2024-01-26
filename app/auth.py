@@ -5,6 +5,7 @@ from flask_mail import Message, Mail
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.db import get_db
 import uuid
+import time
 
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
@@ -19,11 +20,8 @@ def register():
         repass = request.form['repass']
         error = None
 
-        db = get_db()
-        c = db.cursor()
-        c.execute(
-            "SELECT usuario_id FROM Usuario WHERE email = ?", (email,)
-        )
+        db, c = get_db()
+        c.execute("SELECT usuario_id FROM Usuario WHERE email = %s", (email,))
 
         if not name or not email or not password or not repass:
             error = "Todos los campos son obligatorios."
@@ -40,7 +38,7 @@ def register():
 
         if error is None:
             c.execute(
-                "INSERT INTO Usuario(nombre, email, password) OUTPUT Inserted.usuario_id VALUES (?,?,?)",
+                "INSERT INTO usuario(nombre, email, password) VALUES (%s, %s, %s) RETURNING usuario_id",
                 (name, email, generate_password_hash(password))
             )
 
@@ -49,7 +47,7 @@ def register():
 
             verification_token = str(uuid.uuid4())
             c.execute(
-                "UPDATE Usuario SET verification_token = ? WHERE usuario_id = ?",
+                "UPDATE usuario SET verification_token = %s WHERE usuario_id = %s",
                 (verification_token, user_id)
             )
             db.commit()
@@ -75,22 +73,23 @@ def send_verification_email(email, name, token):
 
 @bp.route('/verify/<token>')
 def verify(token):
-    db = get_db()
-    c = db.cursor()
+    db, c = get_db()
 
     c.execute(
-        "SELECT usuario_id FROM Usuario WHERE verification_token = ?", (token,))
+        "SELECT usuario_id FROM Usuario WHERE verification_token = %s", (token,))
     user = c.fetchone()
 
     success = False
     if user is not None:
         c.execute(
-            "UPDATE Usuario SET verified = 1, verification_token = NULL WHERE usuario_id = ?", (user[0],))
+            "UPDATE usuario SET verified = TRUE, verification_token = NULL WHERE usuario_id = %s", (user[0],))
         db.commit()
         success = True
 
         session.clear()
         session['user_id'] = user[0]
+        time.sleep(4)
+        return redirect(url_for('home.index'))
 
     return render_template('auth/verify_email.html', success=success)
 
@@ -101,13 +100,12 @@ def login():
         email = request.form['email']
         password = request.form['pass']
         error = None
-        db = get_db()
-        c = db.cursor()
+        db, c = get_db()
 
         if not email or not password:
             error = "Todos los campos son requeridos."
 
-        c.execute("SELECT * FROM Usuario WHERE email = ?", (email,))
+        c.execute("SELECT * FROM Usuario WHERE email = %s", (email,))
 
         user = c.fetchone()
 
@@ -136,9 +134,8 @@ def load_logged_in_user():
     if user_id is None:
         g.user = None
     else:
-        db = get_db()
-        c = db.cursor()
-        c.execute("SELECT * FROM Usuario WHERE usuario_id = ?", (user_id,))
+        db, c = get_db()
+        c.execute("SELECT * FROM Usuario WHERE usuario_id = %s", (user_id,))
         user = c.fetchone()
 
         if user is not None and user[5]:

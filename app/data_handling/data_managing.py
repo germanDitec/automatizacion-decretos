@@ -19,84 +19,37 @@ def get_inadmisibles_text(inadmisibles):
     return proponentes_inadmisible
 
 
-def add_inadmisibles_decreto(inadmisibles, id, titulo, nombre_adjudicada, rut_adjudicada, total, direccion, cuenta, tipo_compra, propuesta):
-    proponentes_inadmisible = get_inadmisibles_text(inadmisibles)
-    decreto_segundo = f"2.- Declárense inadmisibles las ofertas de la empresa {proponentes_inadmisible}, según los argumentos señalados en el considerando cuarto."
-    decreto_tercero = f"3.- Adjudiquese la Propuesta Pública ID {id}, denominada {titulo}, al proponente {nombre_adjudicada}, RUT {rut_adjudicada}, por la suma total de {total} (REFLEJAR EL VALOR EN TEXTO), para entregar los {tipo_compra} en un plazo de XXXXX."
+def add_visto(doc, n_decreto, fecha_decreto, acuerdo, sesion, datesesion, secretaria, idp, titulo, fecha_apertura, fecha_informe, cdp, datecdp_str, concejo):
 
-    decreto_cuarto = None
-    if propuesta == "1":
-        decreto_cuarto = "4.- Emítase la Orden de Compra correspondiente a nombre del proponente adjudicado, por el monto informado en el numeral precedente."
-    elif propuesta == "2":
-        decreto_cuarto = "4.- El precio del contrato de compra será el valor que pague la Municipalidad al contratista por el servicio contratado y debidamente ejecutados, sobre la base de los valores unitarios ofertados y el monto total ofertado."
-    elif propuesta == "3":
-        decreto_cuarto = "4.- El precio del contrato de compra y Orden de Compra que pague la Municipalidad al contratista por el servicio contratado y debidamente ejecutados, sobre la base de los valores unitarios ofertados y el monto total ofertado."
-    elif propuesta == "4":
-        decreto_cuarto = "4.- Emítase la Orden de Compra con Acuerdo Complementario correspondientes a nombre del proponente adjudicado, por el monto informado en el numeral precedente."
+    primer_parrafo = doc.add_paragraph()
 
-    decreto_quinto = f"5.- Imputese el gasto que involucra la presente adjudicación a la cuenta {cuenta}."
-    decreto_sexto = f"6.- La Secretaria Comunal de Planificación dispondrá la publicación del presente Decreto en el Sistema de Información de Compras y Contratación Pública (www.mercadopublico.cl), según lo dispuesto en el Articulo 57° del Reglamento de la Ley N° 19.886."
-    decreto_septimo = f"7.- Designese como Unidad Técnica responsable de la gestión y administración de {propuesta.upper()} y que actuará como Inspección Técnica, será la {direccion}."
-    return decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto, decreto_sexto, decreto_septimo
+    modified_paragraph = f"el Decreto Alcaldicio N° {n_decreto} de fecha {fecha_decreto}, que aprueba las Bases Administrativas, Bases Técnicas, Anexos y demás antecedentes de la licitación;"
 
+    pp_concejo = f"el Acuerdo N° {acuerdo}, adoptado en Sesión Ordinaria N° {sesion} de fecha {datesesion}, según consta en Cerficiado N° {secretaria} de Secretaria Municipal, del Honorable Concejo Muncipal; "
+    pp_final_line = " la Ley N°19.886 de Bases sobre Contratos Administrativos de Suministro y Prestación de Servicios y su respectivo Reglamento, el cual fue aprobado mediante Decreto Supremo N° 250, del año 2004, del Ministerio de Hacienda y sus modificaciones; y las facultades conferidas en el articulo 63 del D.F.L.N°1, del año 2006, del Ministerio del Interior, que fijo el texto refundido, coordinado y sistematizado de la Ley N°18.695, Organica Constitucional de Municipalidades."
 
-def add_no_inadmisible_decreto(id, titulo, nombre_adjudicada, rut_adjudicada, total, direccion, cuenta, tipo_compra, propuesta):
-    decreto_segundo = f"2.- Adjudiquese la Propuesta Pública ID {id}, denominada {titulo}, al proponente {nombre_adjudicada}, RUT {rut_adjudicada}, por la suma total de {total} (REFLEJAR EL VALOR EN TEXTO), para entregar los {tipo_compra} en un plazo de XXXXX."
-
-    decreto_tercero = None
-    if propuesta == "1":
-        decreto_tercero = "3.- Emítase la Orden de Compra correspondiente a nombre del proponente adjudicado, por el monto informado en el numeral precedente."
-    elif propuesta == "2":
-        decreto_tercero = "3.- El precio del contrato de compra será el valor que pague la Municipalidad al contratista por el servicio contratado y debidamente ejecutados, sobre la base de los valores unitarios ofertados y el monto total ofertado."
-    elif propuesta == "3":
-        decreto_tercero = "3.- El precio del contrato de compra y Orden de Compra que pague la Municipalidad al contratista por el servicio contratado y debidamente ejecutados, sobre la base de los valores unitarios ofertados y el monto total ofertado."
-    elif propuesta == "4":
-        decreto_tercero = "3.- Emítase la Orden de Compra con Acuerdo Complementario correspondientes a nombre del proponente adjudicado, por el monto informado en el numeral precedente."
-
-    decreto_cuarto = f"4.- Imputese el gasto que involucra la presente adjudicación a la cuenta {cuenta}."
-    decreto_quinto = f"5.- La Secretaria Comunal de Planificación dispondrá la publicación del presente Decreto en el Sistema de Información de Compras y Contratación Pública (www.mercadopublico.cl), según lo dispuesto en el Articulo 57° del Reglamento de la Ley N° 19.886."
-    decreto_sexto = f"6.- Designese como Unidad Técnica responsable de la gestión y administración de {propuesta.upper()} y que actuará como Inspección Técnica, será la {direccion}."
-    decreto_septimo = None
-    return decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto, decreto_sexto
-
-
-def add_inadmisibles_no_rechazados(proponentes_inadmisible, id, titulo, nombre_adjudicada, rut_adjudicada, total, direccion, cuenta, tipo_compra, propuesta):
-    decreto_primero = f"1.- Declárense inadmisibles las ofertas de la empresa {proponentes_inadmisible}, por los argumentos senalados en el considerando cuarto."
-    decreto_segundo = f"2.- Adjudiquese la Propuesta Pública ID {id}, denominada {titulo}, al proponente {nombre_adjudicada}, RUT {rut_adjudicada}, por la suma total de {total} (REFLEJAR EL VALOR EN TEXTO), para entregar los {tipo_compra} en un plazo de XXXXX."
-
-    decreto_tercero = ""
-    if propuesta == "1":
-        decreto_tercero = "3.- Emítase la Orden de Compra correspondiente a nombre del proponente adjudicado, por el monto informado en el numeral precedente."
-    elif propuesta == "2":
-        decreto_tercero = "3.- El precio del contrato de compra será el valor que pague la Municipalidad al contratista por el servicio contratado y debidamente ejecutados, sobre la base de los valores unitarios ofertados y el monto total ofertado."
-    elif propuesta == "3":
-        decreto_tercero = "3.- El precio del contrato de compra y Orden de Compra que pague la Municipalidad al contratista por el servicio contratado y debidamente ejecutados, sobre la base de los valores unitarios ofertados y el monto total ofertado."
-    elif propuesta == "4":
-        decreto_tercero = "3.- Emítase la Orden de Compra con Acuerdo Complementario correspondientes a nombre del proponente adjudicado, por el monto informado en el numeral precedente."
-
-    decreto_cuarto = f"4.- Imputese el gasto que involucra la presente adjudicación a la cuenta {cuenta}."
-    decreto_quinto = f"5.- La Secretaria Comunal de Planificación dispondrá la publicación del presente Decreto en el Sistema de Información de Compras y Contratación Pública (www.mercadopublico.cl), según lo dispuesto en el Articulo 57° del Reglamento de la Ley N° 19.886."
-    decreto_sexto = f"6.- Designese como Unidad Técnica responsable de la gestión y administración de {propuesta.upper()} y que actuará como Inspección Técnica, será la {direccion}."
-    return decreto_primero, decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto, decreto_sexto
-
-
-def add_noadm_norec(id, titulo, nombre_adjudicada, rut_adjudicada, total, direccion, cuenta, tipo_compra, propuesta):
-    decreto_primero = f"1.- Adjudiquese la Propuesta Pública ID {id}, denominada {titulo}, al proponente {nombre_adjudicada}, RUT {rut_adjudicada}, por la suma total de {total} (REFLEJAR EL VALOR EN TEXTO), para entregar los {tipo_compra} en un plazo de XXXXX."
-
-    decreto_segundo = ""
-    if propuesta == "1":
-        decreto_segundo = "2.- Emítase la Orden de Compra correspondiente a nombre del proponente adjudicado, por el monto informado en el numeral precedente."
-    elif propuesta == "2":
-        decreto_segundo = "2.- El precio del contrato de compra será el valor que pague la Municipalidad al contratista por el servicio contratado y debidamente ejecutados, sobre la base de los valores unitarios ofertados y el monto total ofertado."
-    elif propuesta == "3":
-        decreto_segundo = "2.- El precio del contrato de compra y Orden de Compra que pague la Municipalidad al contratista por el servicio contratado y debidamente ejecutados, sobre la base de los valores unitarios ofertados y el monto total ofertado."
-    elif propuesta == "4":
-        decreto_segundo = "2.- Emítase la Orden de Compra con Acuerdo Complementario correspondientes a nombre del proponente adjudicado, por el monto informado en el numeral precedente."
-
-    decreto_tercero = f"3.- Imputese el gasto que involucra la presente adjudicación a la cuenta {cuenta}."
-    decreto_cuarto = f"4.- La Secretaria Comunal de Planificación dispondrá la publicación del presente Decreto en el Sistema de Información de Compras y Contratación Pública (www.mercadopublico.cl), según lo dispuesto en el Articulo 57° del Reglamento de la Ley N° 19.886."
-    decreto_quinto = f"5.- Designese como Unidad Técnica responsable de la gestión y administración de {propuesta.upper()} y que actuará como Inspección Técnica, será la {direccion}."
-    return decreto_primero, decreto_segundo, decreto_tercero, decreto_cuarto, decreto_quinto
+    run_pp = primer_parrafo.add_run("La Propuesta Pública con ID ")
+    run_pp_idp = primer_parrafo.add_run(idp)
+    run_pp_idp.bold = True
+    run_pp = primer_parrafo.add_run(" denominada ")
+    run_pp_titulo = primer_parrafo.add_run(f"\"{titulo}\"")
+    run_pp_titulo.bold = True
+    run_pp = primer_parrafo.add_run(f"; {modified_paragraph}")
+    run_pp = primer_parrafo.add_run(
+        f" El Acta de Apertura de Ofertas, de fecha {fecha_apertura}; el Informe de Evaluación de la comisión evaluadora, de fecha {fecha_informe}; el Certificado de Factibilidad N° {cdp}, de fecha {datecdp_str}; ")
+    if concejo == 'on':
+        run_pp_concejo = primer_parrafo.add_run(pp_concejo)
+    run_pp = primer_parrafo.add_run(
+        "el Acta de Proclamación de Alcalde y Concejales de la comuna de Maipú, de fecha 22 de junio de 2021, del Primer Tribunal Electoral Región Metropolitana, que proclamó como alcalde de la comuna de Maipú, a don ")
+    run_pp_alcalde = primer_parrafo.add_run(
+        "TOMÁS VODANOVIC ESCUDERO;")
+    run_pp_alcalde.bold = True
+    run_pp = primer_parrafo.add_run(
+        " el Decreto Alcaldicio N°1656 DAP, de fecha 17 de junio del 2020, que designa como Secretario Municipal a don ")
+    run_pp_secretario = primer_parrafo.add_run(
+        "RICARDO HENRIQUEZ VALDÉS;")
+    run_pp_secretario.bold = True
+    run_pp = primer_parrafo.add_run(pp_final_line)
 
 
 def add_decretos_lineas(doc, id, titulo, rechazadas, inadmisibles, empresas_adjudicadas, direccion, cuenta, tipo_compra, propuesta, valor_propuesta, desiertas):
@@ -238,6 +191,8 @@ def add_decretos(doc, id, titulo, rechazadas, inadmisibles, direccion, cuenta, t
             if 'linea' not in inadmisible
         ])
 
+        start += 1
+
         decreto_primero = f"{start}.- Declárense inadmisibles las ofertas de la empresa {proponentes_inadmisibles_text}, por los argumentos señalados en el considerando cuarto."
         doc.add_paragraph(decreto_primero)
 
@@ -293,8 +248,8 @@ def formate_date_text(date):
     return date_text
 
 
-def informe_to_sharepoint(server_url, username, password, site_url, file, file_name):
-    sharepoint_folder = 'Documentos Compartidos/Informes de evaluación'
+def informe_to_sharepoint(server_url, username, password, site_url, file, file_name, direccion):
+    sharepoint_folder = f'Documentos Compartidos/Informes de evaluación/{direccion}'
     authcookie = Office365(server_url, username=username,
                            password=password).GetCookies()
     site = Site(site_url, version=Version.v365, authcookie=authcookie)
@@ -304,8 +259,8 @@ def informe_to_sharepoint(server_url, username, password, site_url, file, file_n
     folder.upload_file(fileContent, file_name)
 
 
-def decreto_to_sharepoint(server_url, username, password, site_url, file, file_name):
-    sharepoint_folder = 'Documentos Compartidos/Decretos generados'
+def decreto_to_sharepoint(server_url, username, password, site_url, file, file_name, direccion):
+    sharepoint_folder = f'Documentos Compartidos/Decretos generados/{direccion}'
     authcookie = Office365(server_url, username=username,
                            password=password).GetCookies()
     site = Site(site_url, version=Version.v365, authcookie=authcookie)

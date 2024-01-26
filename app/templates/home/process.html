@@ -10,7 +10,7 @@
 <a class="btn" href="{{ url_for('home.download_file', filename=filename) }}">Descargar</a>
 <p>Si deseas generar de nuevo el documento, puedes hacerlo presionando el siguiente botón:</p>
 <a class="btn" href="{{ url_for('home.generate_word', filename=filename, cdp=cdp, datecdp=datecdp, datecompra=datecompra, datedecreto=datedecreto, concejo=concejo, acuerdo=acuerdo, sesion=sesion, datesesion=datesesion, secretaria=secretaria, direccion=direccion, tipo_compra=tipo_compra, propuesta=propuesta, idp=idp, titulo=titulo, cuenta=cuenta, regenerate='true') }}">Generar nuevamente</a>
-<p>Por el contrario, si quieres generar otro documento puedes presionar este botón</p>
+<p>Por el contrario, si quieres generar otro documento puedes presionar este botón:</p>
 <a class="btn" href="{{ url_for('home.index') }}">Generar otro documento</a>
 </div>
 <div class="doc">{{ html | safe }}</div>

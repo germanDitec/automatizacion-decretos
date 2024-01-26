@@ -1,46 +1,35 @@
 instructions = [
-    "USE Decretos;",
+    "SET CONSTRAINTS ALL DEFERRED;",
 
-    "EXEC sp_MSforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL;';",
+    "DROP TABLE IF EXISTS decreto;",
+    "DROP TABLE IF EXISTS informe;",
+    "DROP TABLE IF EXISTS usuario;",
+    "DROP TABLE IF EXISTS propuesta;",
+    "DROP TABLE IF EXISTS direccion;",
 
-    """IF OBJECT_ID('dbo.Decreto') IS NOT NULL
-    DROP TABLE dbo.Decreto;""",
-
-    """IF OBJECT_ID('dbo.Direccion') IS NOT NULL
-    DROP TABLE dbo.Direccion;""",
-
-
-    """IF OBJECT_ID('dbo.Usuario') IS NOT NULL
-    DROP TABLE dbo.Usuario;""",
-
-
-    """IF OBJECT_ID('dbo.Propuesta') IS NOT NULL
-    DROP TABLE dbo.Propuesta;""",
-
-
-    "EXEC sp_MSforeachtable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL;';",
+    "SET CONSTRAINTS ALL IMMEDIATE;",
 
     """
     CREATE TABLE Usuario(
-        usuario_id int IDENTITY(1,1) PRIMARY KEY,
+        usuario_id SERIAL PRIMARY KEY,
         nombre varchar(150) NOT NULL,
         email varchar(150) NOT NULL UNIQUE,
         password varchar(300) NOT NULL,
         verification_token varchar(50),
-        verified bit NOT NULL DEFAULT 0,
-        created_at datetime NOT NULL DEFAULT GETDATE(),
+        verified boolean NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
     """,
 
     """
     CREATE TABLE Propuesta(
-        propuesta_id int IDENTITY(1,1) PRIMARY KEY,
+        propuesta_id SERIAL PRIMARY KEY,
         propuesta varchar(50) NOT NULL
     );
     """,
     """
     CREATE TABLE Direccion(
-        direccion_id int IDENTITY(1,1) PRIMARY KEY,
+        direccion_id SERIAL PRIMARY KEY,
         direccion varchar(200) NOT NULL
     );
     """,
@@ -67,26 +56,38 @@ instructions = [
     "INSERT INTO Direccion(direccion) VALUES ('Servicio Municipal de Agua Potable y Alcantarillado (SMAPA');",
 
 
-
     """
-    CREATE TABLE Decreto(
-        decreto_id int IDENTITY(1,1) PRIMARY KEY,
-        id_propuesta varchar(30) NOT NULL,
+    CREATE TABLE Informe(
+        informe_id SERIAL PRIMARY KEY,
+        idp varchar(40) NOT NULL,
+        propuesta_id INT REFERENCES propuesta (propuesta_id),
+        direccion_id INT REFERENCES direccion (direccion_id),
+        titulo VARCHAR(200) NOT NULL,
         cdp varchar(30) NOT NULL,
-        fecha_cdp datetime NOT NULL,
-        fecha_compra datetime NOT NULL,
-        cuenta int NOT NULL,
-        concejo bit NOT NULL,
+        fecha_cdp timestamp NOT NULL,
+        fecha_compra timestamp NOT NULL,
+        cuenta bigint NOT NULL,
+        concejo boolean NOT NULL,
         acuerdo_concejo int,
         numero_sesion int,
-        fecha_sesion datetime,
+        fecha_sesion timestamp,
         secretaria int,
         tipo_compra VARCHAR(30) NOT NULL,
+        created_by INT REFERENCES Usuario (usuario_id),
+        created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+    """,
+
+    """
+CREATE TABLE Decreto(
+        decreto_id SERIAL PRIMARY KEY,
+        informe_id int REFERENCES Informe (informe_id),
         costo_total DECIMAL(10,2) NOT NULL,
-        propuesta_id int FOREIGN KEY REFERENCES Propuesta (propuesta_id),
-        direccion_id int FOREIGN KEY REFERENCES Direccion (direccion_id),
-        created_by INT FOREIGN KEY REFERENCES Usuario (usuario_id),
-        created_at datetime NOT NULL DEFAULT GETDATE()
+        propuesta_id int REFERENCES propuesta(propuesta_id),
+        direccion_id int REFERENCES direccion(direccion_id),
+        created_by INT REFERENCES usuario (usuario_id),
+        created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
     """
+
 ]

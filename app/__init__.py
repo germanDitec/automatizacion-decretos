@@ -1,4 +1,5 @@
-from flask import Flask, g, render_template
+from flask import Flask, g, render_template, session
+from flask_session import Session
 from flask_mail import Mail
 import os
 
@@ -19,22 +20,26 @@ def create_app():
         MAIL_PASSWORD=os.environ.get('MAIL_PASSWORD'),
         MAIL_DEFAULT_SENDER=os.environ.get('MAIL_DEFAULT_SENDER'),
         MAIL_USE_TLS=True,
-        MAIL_USE_SSL=False
+        MAIL_USE_SSL=False,
     )
 
     mail = Mail(app)
 
-    from . import db
+    app.config['SESSION_TYPE'] = 'filesystem'
+    app.config['SESSION_PERMANENT'] = False
+
+    Session(app)
 
     from . import home
     from . import auth
     from . import about
+    from . import db
+
+    db.init_app(app)
 
     @app.errorhandler(400)
     def not_found(e):
         return render_template('errors/400.html'), 400
-
-    db.init_app(app)
 
     app.register_blueprint(home.bp)
     app.register_blueprint(auth.bp)

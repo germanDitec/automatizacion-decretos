@@ -1,4 +1,5 @@
-import pyodbc
+import psycopg2
+from psycopg2.extras import DictCursor
 import click
 from flask import current_app, g
 from flask.cli import with_appcontext
@@ -6,14 +7,16 @@ from .schema import instructions
 
 
 def get_db():
-    if not 'db' in g:
-        host = current_app.config['DATABASE_HOST']
-        database = current_app.config['DATABASE']
-        username = current_app.config['DATABASE_USER']
-        password = current_app.config['DATABASE_PASSWORD']
-        connect_str = f'DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={host};DATABASE={database};UID={username};PWD={password};timeout=20;TrustServerCertificate=yes'
-        g.db = pyodbc.connect(connect_str)
-        return g.db
+    if 'db' not in g:
+        g.db = psycopg2.connect(
+            host=current_app.config['DATABASE_HOST'],
+            user=current_app.config['DATABASE_USER'],
+            password=current_app.config['DATABASE_PASSWORD'],
+            database=current_app.config['DATABASE'],
+        )
+
+        g.c = g.db.cursor(cursor_factory=DictCursor)
+    return g.db, g.c
 
 
 def close_db(e: None):
@@ -23,9 +26,10 @@ def close_db(e: None):
 
 
 def init_db():
-    db = get_db()
+    db, c = get_db()
     for i in instructions:
-        db.execute(i)
+        c.execute(i)
+
     db.commit()
 
 
@@ -33,7 +37,7 @@ def init_db():
 @with_appcontext
 def init_db_command():
     init_db()
-    click.echo('Base de datos inicializada con éxito ✅')
+    click.echo('Base de datos inicializada ✅')
 
 
 def init_app(app):

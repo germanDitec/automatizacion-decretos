@@ -81,6 +81,25 @@ def extract_id_decreto(pdf_file):
 #     return paragraphs
 
 
+def extract_page_containing_keyword(pdf_file, keyword, case_sensitive=False):
+    with open(pdf_file, "rb") as pdf_file:
+        pdf_reader = PyPDF2.PdfReader(pdf_file)
+        total_pages = len(pdf_reader.pages)
+
+        for i in range(total_pages):
+            page = pdf_reader.pages[i]
+            text = page.extract_text()
+
+            if not case_sensitive:
+                keyword = keyword.lower()
+                text = text.lower()
+
+            if keyword in text:
+                return [text.replace('\n', ' ').strip()]
+
+    return []
+
+
 def extract_paragraphs_containing_keyword(pdf_file, keyword, case_sensitive=False):
     paragraphs = []
     keyword_found = False
@@ -168,7 +187,7 @@ def extract_date_below_keyword(pdf_file, keyword):
             found_keyword = False
 
             for paragraph_text in paragraphs:
-                if keyword in paragraph_text:
+                if keyword.lower() in paragraph_text.lower():
                     found_keyword = True
                 elif found_keyword:
                     fecha_comision = re.findall(regex_fecha, paragraph_text)
