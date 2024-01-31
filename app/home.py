@@ -33,7 +33,7 @@ SESSION_TYPE = 'filesystem'
 ALLOWED_EXTENSIONS = {'pdf'}
 # CUENTA SHAREPOINT, DEBE IR EN VARIABLES DE SESIÓN
 server_url = "https://immaipu.sharepoint.com/"
-site_url = server_url + "sites/Generadordedecretos"
+site_url = server_url + "sites/AutomaticaciondeDecretos"
 
 client = OpenAI(
     api_key=os.environ.get('OPENAI_API_KEY'),
