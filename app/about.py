@@ -16,5 +16,5 @@ def about():
 
 @bp.route('/download')
 def download_file():
-    plantilla_path = "Formato.pdf"
+    plantilla_path = "formato-de-informes.pdf"
     return send_from_directory('media', plantilla_path, as_attachment=True)

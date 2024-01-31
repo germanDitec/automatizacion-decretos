@@ -41,8 +41,23 @@
         {% endwith %}
         {% block content %}        
         {% endblock %}
+    <div class="loader-wrapper">
+      <div class="loader">
+        <div class="dot white"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+    </div>
     </section>
     {% block js %}
     {% endblock js %}
+    <script>
+      window.addEventListener("load", function() {
+        const loader = document.querySelector(".loader-wrapper");
+        loader.style.display = "none";
+      })
+    </script>
 </body>
 </html>

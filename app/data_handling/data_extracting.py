@@ -59,26 +59,9 @@ def extract_id_decreto(pdf_file):
 
             if coincidencia:
                 texto_despues_de_id = coincidencia.group(1).strip()
-                print("Texto despues de ID: ", texto_despues_de_id)
                 break
 
     return texto_despues_de_id
-
-
-# def extract_paragraphs_containing_keyword(pdf_file, keyword):
-#     paragraphs = []
-#     with open(pdf_file, "rb") as pdf_file:
-#         pdf_reader = PyPDF2.PdfReader(pdf_file)
-#         for page in pdf_reader.pages:
-#             text = page.extract_text()
-#             text = text.replace('\n', ' ')
-#             while keyword in text:
-#                 start = text.index(keyword)
-#                 end = text.index('\n', start) if '\n' in text[start:] else None
-#                 paragraph = text[start:end].strip()
-#                 paragraphs.append(paragraph)
-#                 text = text[end:] if end else ""
-#     return paragraphs
 
 
 def extract_page_containing_keyword(pdf_file, keyword, case_sensitive=False):

@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
 {% endblock %}
 {% block content %}
-<form method="post" enctype="multipart/form-data" id="upload-form">
+<form method="post" enctype="multipart/form-data" id="upload-form" onSubmit="submitForm()">
     <div class="input-group">
         <label for="idp">ID de la propuesta</label>
         <input type="text" name="idp" id="idp" placeholder="XXXX-XX-XXXX">
@@ -111,28 +111,30 @@
     <button type="submit" id="submit-button">Generar</button>
 </form>
 
-<div class="loader" id="loader" style="display: none;">
-  <div class="cell d-0"></div>
-  <div class="cell d-1"></div>
-  <div class="cell d-2"></div>
-
-  <div class="cell d-1"></div>
-  <div class="cell d-2"></div>
-  
-  
-  <div class="cell d-2"></div>
-  <div class="cell d-3"></div>
-  
-  
-  <div class="cell d-3"></div>
-  <div class="cell d-4"></div>
-</div>
 
 
 {% endblock content %}
 {% block js %}
 <script src="{{ url_for('static', filename='js/dragAndDrop.js') }}"></script>
     <script>
+        const loader = document.querySelector('.loader-wrapper');
+        console.log(loader)
+        const submitButton = document.querySelector('#submit-button');
+
+        const submitForm = () => {
+            submitButton.disabled = true;
+            loader.style.display = 'flex';
+            form.submit();
+
+            const form = document.querySelector('#upload-form');
+            if (form) {
+            form.submit();
+        }
+
+        }
+
+
+
         document.addEventListener('DOMContentLoaded', function() {
         const h2 = document.querySelector('#title');
         if (h2) {
@@ -158,18 +160,5 @@
 
         });
 
-        const form = document.querySelector('#upload-form');
-        const loader = document.querySelector('#loader');
-        const submitButton = document.querySelector('#submit-button');
-
-        form.addEventListener('submit', function(event) {
-            submitButton.disabled = true;
-            loader.style.display = 'block';
-
-            // Agrega un pequeño retraso antes de que la página se recargue
-            setTimeout(function() {
-                form.submit();
-            }, 1000); // 1000 milisegundos (1 segundo)
-        });    
     </script>
 {% endblock %}

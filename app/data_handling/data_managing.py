@@ -110,10 +110,8 @@ def add_decretos_lineas(doc, id, titulo, rechazadas, inadmisibles, empresas_adju
             lineas_desiertas_text = ', '.join(map(str, lineas_desiertas))
             motivo_desiertas = desiertas.get(
                 'motivo', "motivo no especificada")
-            decreto_desiertas = f"{start}.- En uso de las facultades que la ley otorga y para todos los efectos legales"
+            decreto_desiertas = f"{start}.- Declárense desiertas las ofertas de las empresas {lineas_desiertas_text} por el motivo {motivo_desiertas}."
             doc.add_paragraph(decreto_desiertas)
-
-    print("START: ", start)
 
     for indice, empresa in enumerate(empresas_adjudicadas, start=start):
         nombre = empresa.get('nombre')
@@ -171,14 +169,6 @@ def add_decretos(doc, id, titulo, rechazadas, inadmisibles, direccion, cuenta, t
                 decreto_inadmisibles = f"{start}.- Declárense inadmisibles las ofertas de la empresa {proponentes_inadmisibles_text}, por los argumentos señalados en el considerando cuarto."
                 doc.add_paragraph(decreto_inadmisibles)
 
-        if desiertas and 'desiertas' in desiertas:
-            lineas_desiertas = desiertas.get('desiertas')
-            lineas_desiertas_text = ', '.join(map(str, lineas_desiertas))
-            motivo_desiertas = desiertas.get(
-                'motivo', "motivo no especificada")
-            start += 1
-            decreto_desiertas = f"{start}.- Declárense desiertas las ofertas de las empresas {lineas_desiertas_text} por el motivo {motivo_desiertas}."
-            doc.add_paragraph(decreto_desiertas)
 
     elif inadmisibles:
         proponentes_inadmisibles_text = "; ".join([
@@ -196,14 +186,7 @@ def add_decretos(doc, id, titulo, rechazadas, inadmisibles, direccion, cuenta, t
         decreto_primero = f"{start}.- Declárense inadmisibles las ofertas de la empresa {proponentes_inadmisibles_text}, por los argumentos señalados en el considerando cuarto."
         doc.add_paragraph(decreto_primero)
 
-        if desiertas and 'desiertas' in desiertas:
-            lineas_desiertas = desiertas.get('desiertas')
-            lineas_desiertas_text = ', '.join(map(str, lineas_desiertas))
-            motivo_desiertas = desiertas.get(
-                'motivo', "motivo no especificada")
-            start += 1
-            decreto_desiertas = f"{start}.- En uso de las facultades que la ley otorga y para todos los efectos legales"
-            doc.add_paragraph(decreto_desiertas)
+
 
     if start != 1:
         start += 1
@@ -246,6 +229,7 @@ def formate_date_text(date):
 
     date_text = f"{day} de {month} de {year}"
     return date_text
+
 
 
 def informe_to_sharepoint(server_url, username, password, site_url, file, file_name, direccion):

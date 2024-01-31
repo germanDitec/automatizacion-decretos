@@ -6,6 +6,7 @@ from docx import Document
 from docx.shared import Inches, Pt
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 import concurrent.futures
+import shortuuid
 import os
 import json
 import mammoth
@@ -31,8 +32,6 @@ bp = Blueprint('home', __name__, url_prefix="/")
 SESSION_TYPE = 'filesystem'
 ALLOWED_EXTENSIONS = {'pdf'}
 # CUENTA SHAREPOINT, DEBE IR EN VARIABLES DE SESIÓN
-username = 'german.astudillo@maipu.cl'
-password = 'G.ast023#'
 server_url = "https://immaipu.sharepoint.com/"
 site_url = server_url + "sites/Generadordedecretos"
 
@@ -74,9 +73,9 @@ def index():
             sesion = None
             datesesion = None
             secretaria = None
-            concejo = False
+            concejo_bool = False
         else:
-            concejo = True
+            concejo_bool = True
 
         error = None
 
@@ -98,8 +97,8 @@ def index():
             os.makedirs(upload_folder, exist_ok=True)
             file_path = os.path.join(upload_folder, filename)
             pdf_file.save(file_path)
-            informe_to_sharepoint(server_url, username,
-                                  password, site_url, file_path, filename, valor_direccion)
+            informe_to_sharepoint(server_url, current_app.config['MAIL_USERNAME'],
+                                  current_app.config['MAIL_PASSWORD'], site_url, file_path, filename, valor_direccion)
             db, c = get_db()
             c.execute(
                 """
@@ -108,7 +107,7 @@ def index():
                 secretaria, tipo_compra, created_by) 
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING informe_id
-                """, (idp, propuesta, direccion, titulo, cdp, datecdp, datecompra, cuenta, concejo, acuerdo, sesion, datesesion, secretaria, tipo_compra, g.user[0])
+                """, (idp, propuesta, direccion, titulo, cdp, datecdp, datecompra, cuenta, concejo_bool, acuerdo, sesion, datesesion, secretaria, tipo_compra, g.user[0])
             )
 
             session['informe_id'] = c.fetchone()[0]
@@ -152,7 +151,6 @@ def get_rechazados(pdf_path):
         completion_tokens = rechazados_prompt.usage.completion_tokens
         datos = json.loads(data)
         rechazados = datos.get("rechazados", [])
-        print("rechazados:", rechazados)
         return rechazados, prompt_tokens, completion_tokens
 
     except:
@@ -166,7 +164,9 @@ def get_inadmisibles(pdf_path):
             nombre: nombre empresa,
             RUT: rut empresa,
             linea: lineas
-            ], en el caso de que no tenga lineas, retornar solo el nombre y RUT.
+            ], en el caso de que el proponente inadmisible no tenga lineas, retornar solamente el nombre y RUT:
+                nombre: nombre empresa,
+                RUT: rut empresa
 
             Y en el caso de que no haya ningún proponente inadmisible, retorna este json vacio:
                 inadmisibles:[]
@@ -187,7 +187,6 @@ def get_inadmisibles(pdf_path):
         completion_tokens = rechazados_prompt.usage.completion_tokens
         datos = json.loads(data)
         inadmisibles = datos.get("inadmisibles", [])
-        print("inadmisibles:", inadmisibles)
         return inadmisibles, prompt_tokens, completion_tokens
 
     except:
@@ -211,8 +210,6 @@ def get_evaluacion(pdf_path):
         data_evaluacion = evaluacion_prompt.choices[0].message.content
         prompt_tokens = evaluacion_prompt.usage.prompt_tokens
         completion_tokens = evaluacion_prompt.usage.completion_tokens
-        print("PROMPT EVALUACIÓN: ", evaluacion_page)
-        print("TOTAL TOKENS: ", prompt_tokens + completion_tokens)
         return data_evaluacion, prompt_tokens, completion_tokens
 
     except Exception as e:
@@ -240,7 +237,6 @@ def get_datos_adjudicacion(pdf_path):
             Esto en base a todo este texto, toma en cuenta solamente el parrafo de la 'PROPOSICIÓN DE ADJUDICACION', lo demás ignoralo. {}
             """
         adjudicacion_page = adjudicacion.format(extract_last_page(pdf_path))
-        print("adjudicacion_page:", adjudicacion_page)
         adjudicacion_prompt = client.chat.completions.create(
             model="gpt-4-1106-preview",
             response_format={"type": "json_object"},
@@ -255,8 +251,6 @@ def get_datos_adjudicacion(pdf_path):
         completion_tokens = adjudicacion_prompt.usage.completion_tokens
         data = json.loads(data_adjudicacion)
         empresas = data.get("empresas", [])
-        print("empresas: ", empresas)
-        print("TOTAL TOKENS: ", prompt_tokens + completion_tokens)
         return empresas, prompt_tokens, completion_tokens
 
     except Exception as e:
@@ -266,16 +260,18 @@ def get_datos_adjudicacion(pdf_path):
 def get_desiertas(pdf_path):
     try:
         input_promt = """{}
-        Analiza el texto y retorna un JSON que contiene las líneas desiertas, representadas por el formato: {"desiertas": []}, donde se listarán los números de línea que no tienen ofertas o adjudicaciones.
-        Y el caso de que no haya ninguna linea desierta, retorna este json vacio:
+        Analiza el párrafo de 'PROPOSICIÓN DE ADJUDICACION' y retorna un JSON que contenga las líneas desiertas, representadas por el formato: 
             desiertas:[
-                    numero: numero linea o números de linea,
+                    linea: numero linea o números de linea,
                     motivo: la razon de porque está desierta
                 ]
+        donde se listarán los números de línea que no tienen ofertas o adjudicaciones.
+        Y el caso de que no haya ninguna linea desierta, retorna este json vacio: 
+            desiertas:[]
         Solo quiero el JSON, no incluyas texto adicional, haz esto en base al texto que te estoy proporcionando"""
 
         desiertas_prompt = input_promt.format(
-            extract_page_containing_keyword(pdf_path, "CONCLUSIÓN"))
+            extract_last_page(pdf_path))
 
         desiertas = client.chat.completions.create(
             model="gpt-4-1106-preview",
@@ -285,16 +281,11 @@ def get_desiertas(pdf_path):
                 {"role": "user", "content": desiertas_prompt}
             ]
         )
-        print("desiertas_prompt:", desiertas_prompt)
         data = desiertas.choices[0].message.content
         prompt_tokens = desiertas.usage.prompt_tokens
         completion_tokens = desiertas.usage.completion_tokens
         datos = json.loads(data)
         desiertas = datos.get("desiertas", [])
-        print("=========================================")
-        print("desiertas:", desiertas)
-        print("TOTAL TOKENS: ", prompt_tokens + completion_tokens)
-        print("=========================================\n")
         return desiertas, prompt_tokens, completion_tokens
 
     except:
@@ -319,6 +310,7 @@ def generate_word(filename):
             cdp = request.args.get('cdp')
             cuenta = request.args.get('cuenta')
             concejo = request.args.get("concejo")
+            
             acuerdo = request.args.get('acuerdo')
             sesion = request.args.get('sesion')
             datesesion = request.args.get('datesesion')
@@ -366,34 +358,21 @@ def generate_word(filename):
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 results = list(executor.map(
                     lambda func: func(pdf_path), functions_list))
-            print("RESULTS:", results)
+
             rechazados, prompt_rechazados, completion_rechazados = results[0]
             inadmisibles, prompt_inadmisibles, completion_inadmisibles = results[1]
             data_evaluacion, prompt_evaluacion, completion_evaluacion = results[2]
             empresas_adjudicadas, prompt_adjudicacion, completion_adjudicacion = results[3]
             desiertas, prompt_desiertas, completion_desiertas = results[4]
-            print("Rechazadas :", rechazados, " Prompt :",
-                  prompt_rechazados, " Completion :", completion_rechazados)
-            print("Inadmisibles :", inadmisibles, " Prompt :",
-                  prompt_inadmisibles, " Completion :", completion_inadmisibles)
-            print("Evaluacion :", data_evaluacion, " Prompt :",
-                  prompt_evaluacion, " Completion :", completion_evaluacion)
-            print("Adjudicadas :", empresas_adjudicadas, " Prompt :",
-                  prompt_adjudicacion, " Completion :", completion_adjudicacion)
-            print("Desiertas :", desiertas, " Prompt :",
-                  prompt_desiertas, " Completion :", completion_desiertas)
+
             total_prompt_tokens = prompt_rechazados + prompt_inadmisibles + \
                 prompt_evaluacion + prompt_adjudicacion + prompt_desiertas
             total_completion_tokens = completion_rechazados + completion_inadmisibles + \
                 completion_evaluacion + completion_adjudicacion + completion_desiertas
-            total_tokens = total_prompt_tokens + total_completion_tokens
 
-            print("TOTAL PROMPT TOKENS: ", total_prompt_tokens)
-            print("TOTAL COMPLETION TOKENS: ", total_completion_tokens)
-            print("TOTAL TOTAL TOKENS: ", total_tokens)
 
-            price_prompt = total_prompt_tokens * 0.001
-            price_completion = total_completion_tokens * 0.003
+            price_prompt = (total_prompt_tokens / 1000) * 0.01
+            price_completion = (total_completion_tokens / 1000) * 0.03
             total_price = round(price_prompt + price_completion, 2)
 
             fragmento_adjudicadas = []
@@ -425,7 +404,7 @@ def generate_word(filename):
 
             considerando_cuarto = f"\n4.- Que, de acuerdo con el informe de Evaluación de Ofertas, de fecha {fecha_informe}, la comisión evaluadora estableció lo siguiente:"
 
-            if concejo:
+            if concejo == 'on':
                 considerando_quinto = f"\n5.- Que, la propuesta de adjudicación cuenta con el Acuerdo N° {acuerdo}, adoptado en Sesión Ordinaria N° {sesion} de fecha {datesesion_str}, según consta en Certificado N° {secretaria} de Secretaria Municipal, del Honorable Concejo Municipal."
                 considerando_sexto = f"\n6.- Que, se cuenta con la disponibilidad presupuestaria para este fin, según da cuenta el Certificado de Factibilidad N° {cdp}, de fecha {datecdp_str}."
                 considerando_septimo = f"\n7.- Que, en el Numeral 13 de las Bases Administrativas, establece que la Unidad Técnica responsable de supervisar la ejecución de {valor_propuesta.upper()} será la {valor_direccion}."
@@ -435,7 +414,6 @@ def generate_word(filename):
                 considerando_sexto = f"\n6.- Que, en el Numeral 13 de las Bases Administrativas, establece que la Unidad Técnica responsable de supervisar la ejecución de {valor_propuesta.upper()} será la {valor_direccion}."
 
             table = extract_table_from_pdf(pdf_path)
-            print("Table", table)
             output_file_path = pdf_path.replace(
                 ".pdf", "-PLANTILLA_DECRETO.docx")
             header = doc.sections[0].header
@@ -480,24 +458,23 @@ def generate_word(filename):
 
             decreto_r.bold = True
             if posee_linea:
-                print(titulo)
                 add_decretos_lineas(doc, idp, titulo, rechazados, inadmisibles,
-                                    empresas_adjudicadas, direccion, cuenta, tipo_compra, propuesta, valor_propuesta, desiertas)
+                                    empresas_adjudicadas, valor_direccion, cuenta, tipo_compra, propuesta, valor_propuesta, desiertas)
             else:
-                add_decretos(doc, idp, titulo, rechazados, inadmisibles, direccion, cuenta,
+                add_decretos(doc, idp, titulo, rechazados, inadmisibles, valor_direccion, cuenta,
                              tipo_compra, propuesta, valor_propuesta, desiertas, nombre_adjudicada, total, rut_adjudicada)
 
             doc.save(output_file_path)
 
             db, c = get_db()
-            print("INFORME ID en session", int(session['informe_id']))
 
             c.execute(
                 """
                 INSERT INTO decreto(informe_id, costo_total, propuesta_id, direccion_id, created_by)
                 VALUES (%s, %s, %s, %s, %s)
                 """,
-                (int(session['informe_id']), total_price, propuesta, direccion, session['user_id'])
+                (int(session['informe_id']), total_price,
+                 propuesta, direccion, session['user_id'])
             )
 
             db.commit()
@@ -509,10 +486,10 @@ def generate_word(filename):
                 session['process_ejected'] = True
 
             output_filename = filename.replace(
-                ".pdf", "-PLANTILLA_DECRETO.docx")
+                ".pdf", f"-PLANTILLA_DECRETO.docx")
 
             decreto_to_sharepoint(
-                server_url, username, password, site_url, output_file_path, output_filename, valor_direccion)
+                server_url, current_app.config['MAIL_USERNAME'], current_app.config['MAIL_PASSWORD'], site_url, output_file_path, output_filename, valor_direccion)
 
             return render_template('home/process.html', html=html, filename=filename,
                                    cdp=cdp, datecdp=datecdp, datecompra=datecompra,
@@ -529,7 +506,7 @@ def generate_word(filename):
 
 @ bp.route("/download/<filename>")
 def download_file(filename):
-    output_file_path = filename.replace(".pdf", "-PLANTILLA_DECRETO.docx")
+    output_file_path = filename.replace(".pdf", f"-PLANTILLA_DECRETO.docx")
     return send_from_directory('static/documents_folder', output_file_path, as_attachment=True)
 
 
