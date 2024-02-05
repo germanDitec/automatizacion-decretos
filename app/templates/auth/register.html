@@ -7,19 +7,19 @@
 <form method="post" enctype="multipart/form-data" id="upload-form">
     <div class="input-group">
         <label for="name">Nombre Completo</label>
-        <input type="text" name="name" id="name">
+        <input type="text" name="name" id="name" placeholder="Nombre y apellido">
     </div>
     <div class="input-group">
         <label for="email">Email</label>
-        <input type="email" name="email" id="email">
+        <input type="email" name="email" id="email" placeholder="nombre@maipu.cl">
     </div>
     <div class="input-group">
         <label for="pass">Contraseña</label>
-        <input type="password" name="pass" id="pass">
+        <input type="password" name="pass" id="pass" minlength="6" placeholder="*********">
     </div>
     <div class="input-group">
         <label for="repass">Repita su contraseña</label>
-        <input type="password" name="repass" id="repass">
+        <input type="password" name="repass" id="repass" minlength="6" placeholder="*********">
     </div>
     <button type="submit">Registrar</button>
 </form>

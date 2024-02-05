@@ -1,19 +1,44 @@
 {% extends 'base.html' %}
 
 {% block title %}Verificación de correo{% endblock %}
-{% block css %} {% endblock %}
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/check.css') }}">
+{% endblock %}
 {% block content %}
-
-    <h1>Verificación de Cuenta</h1>
     {% if success %}
-        <p>Tu cuenta ha sido verificada. Ahora puedes iniciar sesión.</p>
+        <div class="card" >
+            <h1>Verificación de Cuenta</h1>
+            <img class="success-img" transition-style="in:circle:center" src="{{ url_for('static', filename='img/checksuccess.png') }}" alt="Success">
+            <p>Tu cuenta ha sido verificada con éxito. Esta página se cerrará en <span id="countdown"></span> segundos.</p>
+        </div>
     {% else %}
-        <p>Enlace de verificación inválido.</p>
+        <div class="card" >
+            <h1>Verificación de Cuenta</h1>
+            <img class="error-img" transition-style="in:circle:center" src="{{ url_for('static', filename='img/checkerror.png') }}" alt="Error">
+            <p>Enlace de verificación inválido. Esta página se cerrará en <span id="countdown"></span> segundos.</p>
+        </div>
     {% endif %}
 
 
 {% endblock %}
 
 {% block js %}
+<script>
+ document.addEventListener('DOMContentLoaded', function(){
+        let count = 5;
+        console.log(count);
+        const countdown = document.querySelector('#countdown');
+        countdown.textContent = count;
+
+        setInterval(function() {
+            count--;
+            countdown.innerText = count;
+
+            if (count <= 0) {
+                window.close();
+            }
+        }, 1000);
+    });
+</script>
 {% endblock %}
 

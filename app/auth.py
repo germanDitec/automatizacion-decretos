@@ -62,6 +62,7 @@ def register():
 
 
 def send_verification_email(email, name, token):
+
     mail = Mail()
     msg = Message(
         'Verifica tu cuenta en la App de Generador de Decretos', recipients=[email])
@@ -87,9 +88,6 @@ def verify(token):
         success = True
 
         session.clear()
-        session['user_id'] = user[0]
-        time.sleep(4)
-        return redirect(url_for('home.index'))
 
     return render_template('auth/verify_email.html', success=success)
 
