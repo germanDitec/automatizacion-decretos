@@ -38,7 +38,7 @@ def register():
 
         if error is None:
             c.execute(
-                "INSERT INTO usuario(nombre, email, password) VALUES (%s, %s, %s) RETURNING usuario_id",
+                "INSERT INTO usuario(nombre, email, password) VALUES (%s, %s, %s) SELECT SCOPE_IDENTITY() as usuario_id",
                 (name, email, generate_password_hash(password))
             )
 
@@ -83,7 +83,7 @@ def verify(token):
     success = False
     if user is not None:
         c.execute(
-            "UPDATE usuario SET verified = TRUE, verification_token = NULL WHERE usuario_id = %s", (user[0],))
+            "UPDATE usuario SET verified = 1, verification_token = NULL WHERE usuario_id = %s", (user[0],))
         db.commit()
         success = True
 
@@ -110,7 +110,7 @@ def login():
         if user is None:
             error = "Usuario y/o contraseña incorrecta."
 
-        if not user[5]:
+        elif not user[5]:
             error = "El correo ingresado no está verificado."
 
         elif not check_password_hash(user[3], password):

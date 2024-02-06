@@ -106,7 +106,7 @@ def index():
                 fecha_compra, cuenta, concejo, acuerdo_concejo, numero_sesion, fecha_sesion, 
                 secretaria, tipo_compra, created_by) 
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING informe_id
+                SELECT SCOPE_IDENTITY() as informe_id
                 """, (idp, propuesta, direccion, titulo, cdp, datecdp, datecompra, cuenta, concejo_bool, acuerdo, sesion, datesesion, secretaria, tipo_compra, g.user[0])
             )
 
@@ -436,7 +436,7 @@ def generate_word(filename):
             visto_p = doc.add_paragraph()
             visto_r = visto_p.add_run("VISTO:")
             visto_r.bold = True
-            add_visto(doc, n_decreto, fecha_decreto, acuerdo, sesion, datesesion, secretaria,
+            add_visto(doc, n_decreto, fecha_decreto, acuerdo, sesion, datesesion_str, secretaria,
                       idp, titulo, fecha_apertura, fecha_informe, cdp, datecdp_str, concejo)
             considerando_p = doc.add_paragraph()
             considerando_r = considerando_p.add_run("CONSIDERANDO:")
