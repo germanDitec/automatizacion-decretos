@@ -147,7 +147,7 @@ def get_rechazados(pdf_path):
             ]
         )
         data = rechazados_prompt.choices[0].message.content
-        prompt_tokens = rechazados_prompt.usage.total_tokens
+        prompt_tokens = rechazados_prompt.usage.prompt_tokens
         completion_tokens = rechazados_prompt.usage.completion_tokens
         datos = json.loads(data)
         rechazados = datos.get("rechazados", [])
@@ -159,18 +159,15 @@ def get_rechazados(pdf_path):
 
 def get_inadmisibles(pdf_path):
     try:
-        input_promt = """Verifica si en el parrafo de 'ADMISIBILIDAD' hay algún proponente que es inadmisible, y si es así retornalos en formato JSON y hazlo con la siguiente estructura:
+        input_promt = """Verifica si en el parrafo de 'ADMISIBILIDAD' hay algún proponente que es inadmisible, y si es así retornalos en formato JSON y hazlo con la siguiente estructura: 
             inadmisibles: [
-            nombre: nombre empresa,
-            RUT: rut empresa,
-            linea: lineas
-            ], en el caso de que el proponente inadmisible no tenga lineas, retornar solamente el nombre y RUT:
-                nombre: nombre empresa,
-                RUT: rut empresa
+            nombre: nombre empresa, 
+            RUT: rut empresa
+            ]
 
-            Y en el caso de que no haya ningún proponente inadmisible, retorna este json vacio:
-                inadmisibles:[]
-            Solo quiero el JSON, no incluyas texto adicional, haz esto en base a este texto y los parrafos que no comiencen con '•' ignoralos. {}"""
+            Y el caso de que no haya ningún proponente rechazado, retorna este json vacio:
+                inadmisibles:[] 
+            Solo quiero el JSON, no incluyas texto adicional, haz esto en base a este texto. {}"""
 
         paragraphs_propmt = input_promt.format(extract_paragraphs_containing_keyword(
             pdf_path, "ADMISIBILIDAD"))
@@ -187,6 +184,7 @@ def get_inadmisibles(pdf_path):
         completion_tokens = rechazados_prompt.usage.completion_tokens
         datos = json.loads(data)
         inadmisibles = datos.get("inadmisibles", [])
+        print("inadmisibles:", inadmisibles)
         return inadmisibles, prompt_tokens, completion_tokens
 
     except:
