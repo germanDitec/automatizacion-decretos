@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
 {% endblock %}
 {% block content %}
-<form method="post" enctype="multipart/form-data" id="upload-form">
+<form method="post" enctype="multipart/form-data" id="upload-form" onsubmit="submitForm()">
     <div class="input-group">
         <label for="name">Nombre Completo</label>
         <input type="text" name="name" id="name" placeholder="Nombre y apellido">
@@ -25,5 +25,17 @@
 </form>
 {% endblock content %}
 {% block js %}
- 
+<script>
+    const loader = document.querySelector('.loader-wrapper');
+    const submitButton = document.querySelector('button[type="submit"]');
+
+    const submitForm = () => {
+        submitButton.disabled = true;
+        loader.style.display = 'flex';
+        const form = document.querySelector('#upload-form');
+        if (form) {
+            form.submit();
+        }
+    }
+</script>
 {% endblock %}
