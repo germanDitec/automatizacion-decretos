@@ -181,8 +181,6 @@ def add_decretos(doc, id, titulo, rechazadas, inadmisibles, direccion, cuenta, t
             if 'linea' not in inadmisible
         ])
 
-        start += 1
-
         decreto_primero = f"{start}.- Declárense inadmisibles las ofertas de la empresa {proponentes_inadmisibles_text}, por los argumentos señalados en el considerando cuarto."
         doc.add_paragraph(decreto_primero)
 
