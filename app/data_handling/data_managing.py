@@ -44,9 +44,7 @@ def add_visto(doc, n_decreto, fecha_decreto, acuerdo, sesion, datesesion, secret
             "TOMÁS VODANOVIC ESCUDERO;")
         run_pp_alcalde.bold = True
     else:
-        run_pp = primer_parrafo.add_run("""el Decreto Alcaldicio N° 4182 DAP, de fecha 9 de diciembre de 2016, que delega las atribuciones 
-        alcaldicias en el Administrador Municipal y sus modificiaciones; El Decreto Alcaldicio N° 1554 DAP, de 
-        fecha 29 de junio del 2021, que designa como Administrador Municipal a don """)
+        run_pp = primer_parrafo.add_run("El Decreto Alcaldicio N° 4182 DAP, de fecha 9 de diciembre de 2016, que delega las atribuciones alcaldicias en el Administrador Municipal y sus modificiaciones; El Decreto Alcaldicio N° 1554 DAP, de fecha 29 de junio del 2021, que designa como Administrador Municipal a don")
         run_pp_administrador = primer_parrafo.add_run(
             "JORGE CÓRDOVA OBREQUEN;"
         )
