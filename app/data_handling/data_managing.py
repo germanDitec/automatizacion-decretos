@@ -22,7 +22,6 @@ def get_inadmisibles_text(inadmisibles):
 def add_visto(doc, n_decreto, fecha_decreto, acuerdo, sesion, datesesion, secretaria, idp, titulo, fecha_apertura, fecha_informe, cdp, datecdp_str, concejo):
 
     primer_parrafo = doc.add_paragraph()
-
     modified_paragraph = f"el Decreto Alcaldicio N° {n_decreto} de fecha {fecha_decreto}, que aprueba las Bases Administrativas, Bases Técnicas, Anexos y demás antecedentes de la licitación;"
 
     pp_concejo = f"el Acuerdo N° {acuerdo}, adoptado en Sesión Ordinaria N° {sesion} de fecha {datesesion}, según consta en Cerficiado N° {secretaria} de Secretaria Municipal, del Honorable Concejo Muncipal; "
@@ -39,16 +38,26 @@ def add_visto(doc, n_decreto, fecha_decreto, acuerdo, sesion, datesesion, secret
         f" El Acta de Apertura de Ofertas, de fecha {fecha_apertura}; el Informe de Evaluación de la comisión evaluadora, de fecha {fecha_informe}; el Certificado de Factibilidad N° {cdp}, de fecha {datecdp_str}; ")
     if concejo == 'on':
         run_pp_concejo = primer_parrafo.add_run(pp_concejo)
-    run_pp = primer_parrafo.add_run(
-        "el Acta de Proclamación de Alcalde y Concejales de la comuna de Maipú, de fecha 22 de junio de 2021, del Primer Tribunal Electoral Región Metropolitana, que proclamó como alcalde de la comuna de Maipú, a don ")
-    run_pp_alcalde = primer_parrafo.add_run(
-        "TOMÁS VODANOVIC ESCUDERO;")
-    run_pp_alcalde.bold = True
+        run_pp = primer_parrafo.add_run(
+            "el Acta de Proclamación de Alcalde y Concejales de la comuna de Maipú, de fecha 22 de junio de 2021, del Primer Tribunal Electoral Región Metropolitana, que proclamó como alcalde de la comuna de Maipú, a don ")
+        run_pp_alcalde = primer_parrafo.add_run(
+            "TOMÁS VODANOVIC ESCUDERO;")
+        run_pp_alcalde.bold = True
+    else:
+        run_pp = primer_parrafo.add_run("""el Decreto Alcaldicio N° 4182 DAP, de fecha 9 de diciembre de 2016, que delega las atribuciones 
+        alcaldicias en el Administrador Municipal y sus modificiaciones; El Decreto Alcaldicio N° 1554 DAP, de 
+        fecha 29 de junio del 2021, que designa como Administrador Municipal a don """)
+        run_pp_administrador = primer_parrafo.add_run(
+            "JORGE CÓRDOVA OBREQUEN;"
+        )
+        run_pp_administrador.bold = True
+
     run_pp = primer_parrafo.add_run(
         " el Decreto Alcaldicio N°1656 DAP, de fecha 17 de junio del 2020, que designa como Secretario Municipal a don ")
     run_pp_secretario = primer_parrafo.add_run(
         "RICARDO HENRIQUEZ VALDÉS;")
     run_pp_secretario.bold = True
+
     run_pp = primer_parrafo.add_run(pp_final_line)
 
 
@@ -100,7 +109,6 @@ def add_decretos_lineas(doc, id, titulo, rechazadas, inadmisibles, empresas_adju
             if 'linea' not in inadmisible
         ])
 
-        start += 1
         decreto_primero = f"{start}.- Declárense inadmisibles las ofertas de la empresa {proponentes_inadmisibles_text}, por los argumentos señalados en el considerando cuarto."
         doc.add_paragraph(decreto_primero)
 
@@ -169,7 +177,6 @@ def add_decretos(doc, id, titulo, rechazadas, inadmisibles, direccion, cuenta, t
                 decreto_inadmisibles = f"{start}.- Declárense inadmisibles las ofertas de la empresa {proponentes_inadmisibles_text}, por los argumentos señalados en el considerando cuarto."
                 doc.add_paragraph(decreto_inadmisibles)
 
-
     elif inadmisibles:
         proponentes_inadmisibles_text = "; ".join([
             f"{inadmisible['nombre']}, RUT {inadmisible['RUT']}" +
@@ -183,8 +190,6 @@ def add_decretos(doc, id, titulo, rechazadas, inadmisibles, direccion, cuenta, t
 
         decreto_primero = f"{start}.- Declárense inadmisibles las ofertas de la empresa {proponentes_inadmisibles_text}, por los argumentos señalados en el considerando cuarto."
         doc.add_paragraph(decreto_primero)
-
-
 
     if start != 1:
         start += 1
@@ -227,7 +232,6 @@ def formate_date_text(date):
 
     date_text = f"{day} de {month} de {year}"
     return date_text
-
 
 
 def informe_to_sharepoint(server_url, username, password, site_url, file, file_name, direccion):
