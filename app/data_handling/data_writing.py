@@ -3,12 +3,6 @@ from docx.shared import Pt
 from docx.shared import Inches
 
 
-def generate_word_document(output_file, data):
-    doc = Document()
-    doc.add_paragraph(data)
-    doc.save(output_file)
-
-
 def add_table_to_word_document(doc, table):
     if table is None:
         return
