@@ -13,14 +13,13 @@ import mammoth
 from app.auth import login_required
 from app.db import get_db
 
-from app.data_handling.data_extracting import (extract_table_from_pdf, extract_paragraph_after_keyword, extract_num_decreto, extract_id_decreto,
-                                               extract_paragraphs_containing_keyword, replace_word_in_paragraph, extract_line_below_propuesta_publica, add_indented_paragraph, extract_date_from_keyword,
-                                               extract_date_below_keyword, extract_date_from_last_page, extract_last_page, obtener_direccion, obtener_propuesta, extract_page_containing_keyword)
+from app.data_handling.data_extracting import (extract_table_from_pdf, extract_num_decreto, 
+                                               extract_paragraphs_containing_keyword, extract_date_from_keyword, extract_date_from_last_page, extract_last_page, obtener_direccion, obtener_propuesta, extract_page_containing_keyword)
 
-from app.data_handling.data_managing import (get_rechazados_text, get_inadmisibles_text, add_decretos_lineas,
+from app.data_handling.data_managing import (get_rechazados_text, add_decretos_lineas,
                                              add_decretos, formate_date_text, informe_to_sharepoint, decreto_to_sharepoint, add_visto)
 
-from app.data_handling.data_writing import generate_word_document, add_table_to_word_document
+from app.data_handling.data_writing import add_table_to_word_document
 
 
 from openai import OpenAI
@@ -51,6 +50,11 @@ def allowed_file(filename):
 @bp.route("/", methods=["GET", "POST"])
 @login_required
 def index():
+    """
+    Esta función es la encargada de manejar el formulario de generación de decretos.
+    Además también transforma algunos datos con el fin de entregar los datos limpios
+    a la función de generar el documento final.
+    """
     if request.method == 'POST' and 'file' in request.files:
         idp = request.form.get('idp')
         titulo = request.form.get('titulo')
@@ -126,6 +130,10 @@ def index():
 
 
 def get_rechazados(pdf_path):
+    """
+    En esta función se realiza la petición a la api de GPT para obtener los rechazados
+    se retorna un json y también el coste de los prompts
+    """
     try:
         input_promt = """Verifica si hay proponentes que fuéron rechazados, y si es así retornalos en formato JSON y hazlo con la siguiente estructura:
             rechazados: [
@@ -158,6 +166,10 @@ def get_rechazados(pdf_path):
 
 
 def get_inadmisibles(pdf_path):
+    """
+    En esta función se realiza la petición a la api de GPT para obtener los inadmisibles
+    se retorna un json y también el coste de los prompts
+    """
     try:
         input_promt = """Verifica si en el parrafo de 'ADMISIBILIDAD' hay algún proponente que es inadmisible, y si es así retornalos en formato JSON y hazlo con la siguiente estructura: 
             inadmisibles: [
@@ -192,6 +204,11 @@ def get_inadmisibles(pdf_path):
 
 
 def get_evaluacion(pdf_path):
+    """
+    En esta función se realiza la petición a la api de GPT para obtener la evaluación
+    utilizando una función que extrae páginas a través de una palabra clave
+    se retorna un json y también el coste de los prompts
+    """
     try:
         evaluacion_input = "Quiero que hagas un resumen de la evaluación del o los proponentes desde el parrafo de 'ADMISIBILIDAD' hasta antes del párrafo de 'CONCLUSIÓN', redacta el resumen sin especificar que es lo que te pedí. También quiero que me listes con viñetas el resumen y si hay proponentes que fueron declarados inadmisibles detallalos, recuerda retornar en texto sin formato, haz esto en base a esta información: {}"
         evaluacion_page = evaluacion_input.format(
@@ -215,6 +232,10 @@ def get_evaluacion(pdf_path):
 
 
 def get_datos_adjudicacion(pdf_path):
+    """
+    En esta función se realiza la petición a la api de GPT para obtener los datos de los proponentes a adjudicación
+    se retorna un json y también el coste de los prompts
+    """
     try:
         adjudicacion = """Quiero que me retornes nombre, RUT y monto total de la o las empresas que hayan sido nombradas. Esto en formato JSON, extrae la información desde el párrafo de 'PROPOSICIÓN DE ADJUDICACIÓN'. Retorna solo el JSON con la siguiente estructura.
         En el caso de que existan más lineas en el parrafo de 'PROPOSICIÓN DE ADJUDICACION', retorna con el siguiente formato:
@@ -256,6 +277,10 @@ def get_datos_adjudicacion(pdf_path):
 
 
 def get_desiertas(pdf_path):
+    """
+    En esta función se realiza la petición a la api de GPT para obtener las lineas desiertas
+    se retorna un json y también el coste de los prompts
+    """
     try:
         input_promt = """{}
         Analiza el párrafo de 'PROPOSICIÓN DE ADJUDICACION' y retorna un JSON que contenga las líneas desiertas, representadas por el formato: 
@@ -290,6 +315,7 @@ def get_desiertas(pdf_path):
         return [], 0, 0
 
 
+# Lista de funciones para llamar luego en la función de generar el decreto
 functions_list = [get_rechazados, get_inadmisibles,
                   get_evaluacion, get_datos_adjudicacion, get_desiertas]
 
@@ -297,6 +323,11 @@ functions_list = [get_rechazados, get_inadmisibles,
 @bp.route("/generate/<filename>", methods=['GET'])
 @login_required
 def generate_word(filename):
+    """
+    En esta función se encarga de generar el documento final.
+    Recibe la información del formulario a través de parametros y luego se utilizan 
+    para generar el documento docx.
+    """
     if filename.endswith(".pdf"):
         try:
             regenerate = request.args.get('regenerate', 'false')
@@ -308,7 +339,7 @@ def generate_word(filename):
             cdp = request.args.get('cdp')
             cuenta = request.args.get('cuenta')
             concejo = request.args.get("concejo")
-            
+
             acuerdo = request.args.get('acuerdo')
             sesion = request.args.get('sesion')
             datesesion = request.args.get('datesesion')
@@ -368,7 +399,6 @@ def generate_word(filename):
             total_completion_tokens = completion_rechazados + completion_inadmisibles + \
                 completion_evaluacion + completion_adjudicacion + completion_desiertas
 
-
             price_prompt = (total_prompt_tokens / 1000) * 0.01
             price_completion = (total_completion_tokens / 1000) * 0.03
             total_price = round(price_prompt + price_completion, 2)
@@ -402,11 +432,12 @@ def generate_word(filename):
 
             considerando_cuarto = f"\n4.- Que, de acuerdo con el informe de Evaluación de Ofertas, de fecha {fecha_informe}, la comisión evaluadora estableció lo siguiente:"
 
+            # En el caso de que el usuario haya seleccionado que la licitación sí pasó por concejo se agrega el texto correspondiente
             if concejo == 'on':
                 considerando_quinto = f"\n5.- Que, la propuesta de adjudicación cuenta con el Acuerdo N° {acuerdo}, adoptado en Sesión Ordinaria N° {sesion} de fecha {datesesion_str}, según consta en Certificado N° {secretaria} de Secretaria Municipal, del Honorable Concejo Municipal."
                 considerando_sexto = f"\n6.- Que, se cuenta con la disponibilidad presupuestaria para este fin, según da cuenta el Certificado de Factibilidad N° {cdp}, de fecha {datecdp_str}."
                 considerando_septimo = f"\n7.- Que, en el Numeral 13 de las Bases Administrativas, establece que la Unidad Técnica responsable de supervisar la ejecución de {valor_propuesta.upper()} será la {valor_direccion}."
-
+            # En el caso de que el usuario no haya seleccionado que la licitación pasó por concejo se agrega el texto correspondiente
             else:
                 considerando_quinto = f"\n5.- Que, se cuenta con la disponibilidad presupuestaria para este fin, según da cuenta el Certificado de Factibilidad N° {cdp}, de fecha {datecdp_str}."
                 considerando_sexto = f"\n6.- Que, en el Numeral 13 de las Bases Administrativas, establece que la Unidad Técnica responsable de supervisar la ejecución de {valor_propuesta.upper()} será la {valor_direccion}."
@@ -417,6 +448,7 @@ def generate_word(filename):
             header = doc.sections[0].header
             paragraph = header.paragraphs[0]
             logo_run = paragraph.add_run()
+            # Imagen de pie de página del documento
             logo_run.add_picture(
                 image_path, width=Inches(7), height=Inches(0.5))
             fecha_decreto_alcaldicio = doc.add_paragraph()
@@ -479,16 +511,20 @@ def generate_word(filename):
 
             with open(output_file_path, "rb") as docx_file:
                 result = mammoth.convert_to_html(docx_file)
+                # El resultado se transforma en HTML para mostrar el docx en la página de resultado
                 html = result.value
                 session['generated_document'] = html
+                # Luego de realizar todo el proceso, se indica que ya se ha ejectutado el proceso
                 session['process_ejected'] = True
 
             output_filename = filename.replace(
                 ".pdf", f"-PLANTILLA_DECRETO.docx")
 
+            # Se envia el decreto al Sharepoint
             decreto_to_sharepoint(
                 server_url, current_app.config['MAIL_USERNAME'], current_app.config['MAIL_PASSWORD'], site_url, output_file_path, output_filename, valor_direccion)
 
+            # Se carga la plantilla cuando se procesa todo, con todos los argumentos que se utilizan en procces.html
             return render_template('home/process.html', html=html, filename=filename,
                                    cdp=cdp, datecdp=datecdp, datecompra=datecompra,
                                    cuenta=cuenta, concejo=concejo, acuerdo=acuerdo,
@@ -502,7 +538,8 @@ def generate_word(filename):
             return render_template('errors/error_general.html', error=str(e)), 500
 
 
-@ bp.route("/download/<filename>")
+# Endpoint para descargar la plantilla del decreto
+@bp.route("/download/<filename>")
 def download_file(filename):
     output_file_path = filename.replace(".pdf", f"-PLANTILLA_DECRETO.docx")
     return send_from_directory('static/documents_folder', output_file_path, as_attachment=True)

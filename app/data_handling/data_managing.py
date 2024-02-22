@@ -5,22 +5,20 @@ from shareplum.site import Version
 
 
 def get_rechazados_text(rechazados):
+    """
+    Transforma una lista de rechazados en texto.
+    """
     motivo_rechazo = rechazados[0].get("motivo", "")
     fragmentos_texto = [
         f"{proponente['nombre']}, RUT {proponente['RUT']}" for proponente in rechazados]
     proponentes_texto = "; ".join(fragmentos_texto)
+    # El texto final se verá así: nombre, RUT XX.XXX.XXX;
     return proponentes_texto, motivo_rechazo
 
-
-def get_inadmisibles_text(inadmisibles):
-    fragmentos_texto_inadmisible = [
-        f"{inadmisible['nombre']}, RUT {inadmisible['RUT']}" for inadmisible in inadmisibles]
-    proponentes_inadmisible = "; ".join(fragmentos_texto_inadmisible)
-    return proponentes_inadmisible
-
-
 def add_visto(doc, n_decreto, fecha_decreto, acuerdo, sesion, datesesion, secretaria, idp, titulo, fecha_apertura, fecha_informe, cdp, datecdp_str, concejo):
-
+    """
+    Añade el párrafo de visto.
+    """
     primer_parrafo = doc.add_paragraph()
     modified_paragraph = f"el Decreto Alcaldicio N° {n_decreto} de fecha {fecha_decreto}, que aprueba las Bases Administrativas, Bases Técnicas, Anexos y demás antecedentes de la licitación;"
 
@@ -44,7 +42,8 @@ def add_visto(doc, n_decreto, fecha_decreto, acuerdo, sesion, datesesion, secret
             "TOMÁS VODANOVIC ESCUDERO;")
         run_pp_alcalde.bold = True
     else:
-        run_pp = primer_parrafo.add_run("El Decreto Alcaldicio N° 4182 DAP, de fecha 9 de diciembre de 2016, que delega las atribuciones alcaldicias en el Administrador Municipal y sus modificiaciones; El Decreto Alcaldicio N° 1554 DAP, de fecha 29 de junio del 2021, que designa como Administrador Municipal a don ")
+        run_pp = primer_parrafo.add_run(
+            "El Decreto Alcaldicio N° 4182 DAP, de fecha 9 de diciembre de 2016, que delega las atribuciones alcaldicias en el Administrador Municipal y sus modificiaciones; El Decreto Alcaldicio N° 1554 DAP, de fecha 29 de junio del 2021, que designa como Administrador Municipal a don ")
         run_pp_administrador = primer_parrafo.add_run(
             "JORGE CÓRDOVA OBREQUEN;"
         )
@@ -60,6 +59,9 @@ def add_visto(doc, n_decreto, fecha_decreto, acuerdo, sesion, datesesion, secret
 
 
 def add_decretos_lineas(doc, id, titulo, rechazadas, inadmisibles, empresas_adjudicadas, direccion, cuenta, tipo_compra, propuesta, valor_propuesta, desiertas):
+    """
+    Función para añadir los párrafos de decreto que tengan lineas adicionales
+    """
     start = 1
 
     if rechazadas:
@@ -149,6 +151,9 @@ def add_decretos_lineas(doc, id, titulo, rechazadas, inadmisibles, empresas_adju
 
 
 def add_decretos(doc, id, titulo, rechazadas, inadmisibles, direccion, cuenta, tipo_compra, propuesta, valor_propuesta, desiertas, nombre_adjudicada, total, rut_adjudicada):
+    """
+    Agrega los decretos correspondientes a una propuesta
+    """
     start = 1
     if rechazadas:
         proponentes_rechazadas, motivo = get_rechazados_text(rechazadas)
@@ -219,6 +224,9 @@ def add_decretos(doc, id, titulo, rechazadas, inadmisibles, direccion, cuenta, t
 
 
 def formate_date_text(date):
+    """
+    Formatea una fecha a texto.
+    """
     date_obj = datetime.strptime(date, "%Y-%m-%d")
 
     months = [
@@ -228,11 +236,15 @@ def formate_date_text(date):
     month = months[date_obj.month - 1]
     year = date_obj.year
 
+    # Formato de la fecha
     date_text = f"{day} de {month} de {year}"
     return date_text
 
 
 def informe_to_sharepoint(server_url, username, password, site_url, file, file_name, direccion):
+    """
+    Añade el informe al sharepoint en la carpeta de la Dirección
+    """
     sharepoint_folder = f'Documentos Compartidos/Informes de evaluación/{direccion}'
     authcookie = Office365(server_url, username=username,
                            password=password).GetCookies()
@@ -244,6 +256,9 @@ def informe_to_sharepoint(server_url, username, password, site_url, file, file_n
 
 
 def decreto_to_sharepoint(server_url, username, password, site_url, file, file_name, direccion):
+    """
+    Añade la plantilla de decreto generada al sharepoint en la carpeta de la Dirección
+    """
     sharepoint_folder = f'Documentos Compartidos/Decretos generados/{direccion}'
     authcookie = Office365(server_url, username=username,
                            password=password).GetCookies()

@@ -6,6 +6,9 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
 
 def extract_table_from_pdf(pdf_file):
+    """
+    Obtiene la tabla del PDF, luego de la primera página.
+    """
     table = None
     with pdfplumber.open(pdf_file) as pdf:
         for page_num in range(1, len(pdf.pages)):
@@ -17,24 +20,10 @@ def extract_table_from_pdf(pdf_file):
 
     return table
 
-
-def extract_paragraph_after_keyword(pdf_file, keyword):
-    paragraph = ""
-    with open(pdf_file, "rb") as pdf_file:
-        pdf_reader = PyPDF2.PdfReader(pdf_file)
-        for page in pdf_reader.pages:
-            page_text = page.extract_text()
-            match = re.search(keyword, page_text)
-            if match:
-                paragraph_match = re.search(
-                    r'(?<=\n).*?(?=\n|$)', page_text[match.end():])
-                if paragraph_match:
-                    paragraph = paragraph_match.group(0)
-                    break
-    return paragraph.strip()
-
-
 def extract_num_decreto(pdf_file):
+    """
+    Extrae el número de decreto del párrafo 4. APROBACIÓN DE BASES Y OTROS ANTECEDENTES
+    """
     with open(pdf_file, 'rb') as pdf:
         pdf_reader = PyPDF2.PdfReader(pdf)
 
@@ -48,23 +37,12 @@ def extract_num_decreto(pdf_file):
     return numero
 
 
-def extract_id_decreto(pdf_file):
-    texto_despues_de_id = ""
-    with open(pdf_file, 'rb') as pdf:
-        pdf_reader = PyPDF2.PdfReader(pdf)
-
-        for page in pdf_reader.pages:
-            texto = page.extract_text()
-            coincidencia = re.search(r'ID:\s*(.+)', texto)
-
-            if coincidencia:
-                texto_despues_de_id = coincidencia.group(1).strip()
-                break
-
-    return texto_despues_de_id
 
 
 def extract_page_containing_keyword(pdf_file, keyword, case_sensitive=False):
+    """
+    Extrae la página completa de un PDF que contenga una palabra clave.
+    """
     with open(pdf_file, "rb") as pdf_file:
         pdf_reader = PyPDF2.PdfReader(pdf_file)
         total_pages = len(pdf_reader.pages)
@@ -84,6 +62,9 @@ def extract_page_containing_keyword(pdf_file, keyword, case_sensitive=False):
 
 
 def extract_paragraphs_containing_keyword(pdf_file, keyword, case_sensitive=False):
+    """
+    Obtiene la fecha de una línea debajo de una palabra clave.
+    """
     paragraphs = []
     keyword_found = False
 
@@ -114,41 +95,14 @@ def extract_paragraphs_containing_keyword(pdf_file, keyword, case_sensitive=Fals
 
     return paragraphs
 
-
-def replace_word_in_paragraph(paragraph, old_word, new_word):
-    return paragraph.replace(old_word, new_word)
-
-
-def extract_line_below_propuesta_publica(pdf_file):
-    line = ""
-    with pdfplumber.open(pdf_file) as pdf:
-        for page in pdf.pages:
-            text = page.extract_text()
-            lines = text.split("\n")
-            for i, line_text in enumerate(lines):
-                if "PROPUESTA PÚBLICA" in line_text:
-                    if i < len(lines) - 1:
-                        line = lines[i + 1].strip()
-                    break
-    return line
-
-
-def add_indented_paragraph(doc, text, indentation, alignment=WD_PARAGRAPH_ALIGNMENT.LEFT):
-    paragraph = doc.add_paragraph()
-    paragraph.alignment = alignment
-    run = paragraph.add_run(text)
-    run.font.size = Pt(12)
-
-    style = paragraph.style
-    style.paragraph_format.left_indent = Pt(indentation)
-
-    return paragraph
-
-
+# Regex para extraer fechas
 regex_fecha = r"\d{1,2}/\d{1,2}/\d{4}|\d{1,2} de [a-zA-Z]+ de \d{4}"
 
 
 def extract_date_from_keyword(pdf_file, keyword):
+    """
+    Obtiene la fecha de una línea que contenga una palabra clave.
+    """
     with pdfplumber.open(pdf_file) as pdf:
         for page in pdf.pages:
             text = page.extract_text()
@@ -159,26 +113,10 @@ def extract_date_from_keyword(pdf_file, keyword):
                     if date:
                         return date[0]
     return date[0]
-
-
-def extract_date_below_keyword(pdf_file, keyword):
-    with pdfplumber.open(pdf_file) as pdf:
-        for page in pdf.pages:
-            text = page.extract_text()
-            paragraphs = text.split("\n")
-
-            found_keyword = False
-
-            for paragraph_text in paragraphs:
-                if keyword.lower() in paragraph_text.lower():
-                    found_keyword = True
-                elif found_keyword:
-                    fecha_comision = re.findall(regex_fecha, paragraph_text)
-                    if fecha_comision:
-                        return fecha_comision[0]
-
-
 def extract_date_from_last_page(pdf_file):
+    """
+    Obtiene la fecha del último párrafo de un PDF.
+    """
     with pdfplumber.open(pdf_file) as pdf:
         last_page = pdf.pages[-1]
         text = last_page.extract_text()
@@ -198,6 +136,9 @@ def extract_date_from_last_page(pdf_file):
 
 
 def extract_last_page(pdf_file):
+    """
+    Extrae la última pàgina de un PDF.
+    """
     with pdfplumber.open(pdf_file) as pdf:
         last_page = pdf.pages[-1]
         text = last_page.extract_text()
@@ -205,6 +146,9 @@ def extract_last_page(pdf_file):
 
 
 def obtener_direccion(direccion):
+    """
+    Maneja las opciones de selección de dirección.
+    """
     opciones = {
         "0": "-- Seleccione Dirección --",
         "1": "Dirección de Administración y Finanzas (DAF)",
@@ -227,6 +171,9 @@ def obtener_direccion(direccion):
 
 
 def obtener_propuesta(propuesta):
+    """
+    Maneja el checkbox de propuesta
+    """
     opciones = {
         "0": "-- Seleccione Propuesta --",
         "1": "Orden de Compra",
