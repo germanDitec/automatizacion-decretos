@@ -59,6 +59,7 @@ pycparser==2.21
 pydantic==2.5.3
 pydantic-settings==2.1.0
 pydantic_core==2.14.6
+pymssql==2.2.11
 pyodbc==5.0.1
 PyPDF2==3.0.1
 pypdfium2==4.23.1
